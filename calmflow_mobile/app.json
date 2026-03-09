@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "CalmFlow",
+    "slug": "calmflow",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTabletMode": true,
+      "bundleIdentifier": "com.calmflow.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.calmflow.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [],
+    "extra": {
+      "API_BASE_URL": "http://192.168.1.19:8000/api/v1",
+      "API_TIMEOUT": 10000,
+      "eas": {
+        "projectId": "seu-eas-project-id"
+      }
+    }
+  }
+}
