@@ -19,7 +19,8 @@ SECRET_KEY = config(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,192.168.1.19', cast=lambda v: [s.strip() for s in v.split(',')])
+# ⚠️ DESENVOLVIMENTO: Permite todos os hosts (desabilitar em produção)
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 INSTALLED_APPS = [
@@ -44,7 +45,6 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -153,13 +153,25 @@ SIMPLE_JWT = {
 # ==================
 # CORS Configuration
 # ==================
-CORS_ALLOWED_ORIGINS = config(
-    'CORS_ALLOWED_ORIGINS',
-    default='http://localhost:3000,http://localhost:8000,http://127.0.0.1:3000,http://127.0.0.1:8000,http://192.168.1.19:8081',
-    cast=lambda v: [s.strip() for s in v.split(',')]
-)
+# ⚠️ DESENVOLVIMENTO: Permite TODOS os origins
+CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOW_CREDENTIALS = True
+
+# ==================
+# CSRF Configuration
+# ==================
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:3000',
+    'http://localhost:8000',
+    'http://localhost:8081',
+    'http://localhost:19006',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:8000',
+    'http://127.0.0.1:8081',
+    'http://192.168.1.19:8000',
+    'http://192.168.1.19:8081',
+]
 
 CORS_ALLOW_HEADERS = [
     'accept',

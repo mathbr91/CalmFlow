@@ -1,14 +1,39 @@
 /**
  * 🔌 API SERVICE
  * Axios com interceptadores para JWT, timeouts e erros
+ * Detecção inteligente de ambiente (Web vs Mobile)
  */
 
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
-const API_BASE_URL = Constants.expoConfig?.extra?.API_BASE_URL || 'http://192.168.1.19:8000/api/v1'; // IP do PC na rede local
+/**
+ * 🎯 DETECÇÃO INTELIGENTE DE API_BASE_URL
+ * - Navegador (Web): http://127.0.0.1:8000/api/v1
+ * - Celular (Expo Go): http://192.168.1.19:8000/api/v1
+ */
+function getApiBaseUrl() {
+  // Se houver configuração no app.json/Constants
+  if (Constants.expoConfig?.extra?.API_BASE_URL) {
+    return Constants.expoConfig.extra.API_BASE_URL;
+  }
+
+  // Detecta o ambiente
+  if (Platform.OS === 'web') {
+    // Navegador: usa localhost
+    return 'http://127.0.0.1:8000/api/v1';
+  } else {
+    // Mobile (iOS/Android com Expo Go): usa IP da rede local
+    return 'http://192.168.1.19:8000/api/v1';
+  }
+}
+
+const API_BASE_URL = getApiBaseUrl();
 const API_TIMEOUT = Constants.expoConfig?.extra?.API_TIMEOUT || 10000;
+
+console.log(`[ApiService] Ambiente: ${Platform.OS}, URL: ${API_BASE_URL}`);
 
 class ApiService {
   constructor() {
@@ -17,29 +42,42 @@ class ApiService {
       timeout: API_TIMEOUT,
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
     });
 
-    // Interceptador de requisição: adiciona JWT token
+    // Interceptador de requisição: adiciona JWT token e garante headers
     this.client.interceptors.request.use(
       async (config) => {
         try {
+          // ✅ Garante que Content-Type sempre é application/json
+          if (!config.headers['Content-Type']) {
+            config.headers['Content-Type'] = 'application/json';
+          }
+
           const token = await AsyncStorage.getItem('access_token');
           if (token) {
             config.headers.Authorization = `Bearer ${token}`;
           }
+
+          console.log(`[ApiService] ${config.method.toUpperCase()} ${config.url}`);
         } catch (error) {
-          console.error('[ApiService] Erro ao obter JWT token:', error);
+          console.error('[ApiService] Erro ao preparar requisição:', error);
         }
         return config;
       },
       (error) => Promise.reject(error)
     );
 
-    // Interceptador de resposta: refesh token se expirado
+    // Interceptador de resposta: refresh token se expirado
     this.client.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        console.log(`[ApiService] ✅ ${response.status} ${response.config.url}`);
+        return response;
+      },
       async (error) => {
+        console.error(`[ApiService] ❌ ${error.response?.status || 'ERRO'} ${error.config?.url}`, error.message);
+
         const originalRequest = error.config;
 
         if (error.response?.status === 401 && !originalRequest._retry) {
@@ -52,6 +90,7 @@ class ApiService {
               await AsyncStorage.setItem('access_token', response.access);
               this.client.defaults.headers.Authorization = `Bearer ${response.access}`;
               originalRequest.headers.Authorization = `Bearer ${response.access}`;
+              console.log('[ApiService] Token renovado, tentando requisição novamente...');
               return this.client(originalRequest);
             }
           } catch (refreshError) {
