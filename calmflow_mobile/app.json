@@ -6,14 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
     "ios": {
       "supportsTabletMode": true,
       "bundleIdentifier": "com.calmflow.app"
@@ -26,7 +18,7 @@
       "package": "com.calmflow.app"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "bundleUrl": "http://192.168.1.19:19006"
     },
     "plugins": [],
     "extra": {

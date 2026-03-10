@@ -8,3 +8,4 @@ export { LoginScreen } from './LoginScreen';
 export { RegisterScreen } from './RegisterScreen';
 export { CheckInScreen } from './CheckInScreen';
 export { ProfileScreen } from './ProfileScreen';
+export { HistoryScreen } from './HistoryScreen';

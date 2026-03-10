@@ -65,6 +65,8 @@ class CheckInSerializer(serializers.ModelSerializer):
             'gatilho',
             'gatilho_display',
             'auto_eficacia',
+            'sintomas',
+            'notas',
             'criado_em',
         ]
         read_only_fields = [

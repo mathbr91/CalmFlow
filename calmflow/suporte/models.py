@@ -64,6 +64,16 @@ class CheckIn(models.Model):
         help_text='Nível de confiança em lidar com as emoções (0-10)'
     )
     
+    sintomas = models.TextField(
+        blank=True,
+        help_text='Descreva os sintomas físicos ou emocionais que está sentindo'
+    )
+    
+    notas = models.TextField(
+        blank=True,
+        help_text='Notas adicionais ou observações sobre o seu estado'
+    )
+    
     criado_em = models.DateTimeField(auto_now_add=True)
     
     class Meta:

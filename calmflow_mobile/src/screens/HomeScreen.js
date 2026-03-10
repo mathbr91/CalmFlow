@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ScrollView,
+  Modal,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { colors, spacing, typography } from '../themes';
@@ -26,41 +27,26 @@ export const HomeScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(false);
   const [technique, setTechnique] = useState(null);
   const [showTechnique, setShowTechnique] = useState(false);
+  const [showBreathingModal, setShowBreathingModal] = useState(false);
 
   useEffect(() => {
     // Se voltou da tela de check-in com mensagem
     if (route.params?.showCheckInSuccess) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
+
+    // Se deve mostrar modal de respiração (depois do check-in inteligente)
+    if (route.params?.showBreathingModal) {
+      setShowBreathingModal(true);
+    }
   }, [route.params]);
 
   const handlePanicPress = async () => {
-    setLoading(true);
-    setShowTechnique(false);
-
-    try {
-      // Vibração tátil de ativação
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-
-      // Faz POST para emergências
-      const response = await apiService.createEmergencia('outro', true);
-
-      // Vibração suave de sucesso
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-      // Extrai técnica da resposta
-      setTechnique(response.tecnica_sugerida);
-      setShowTechnique(true);
-    } catch (error) {
-      console.error('[HomeScreen] Erro ao criar emergência:', error);
-      // Vibração de erro
-      await Haptics.notificationAsync(
-        Haptics.NotificationFeedbackType.Error
-      );
-      alert('Desculpe, houve um erro. Tente novamente.');
-    } finally {
-      setLoading(false);
-    }
+    // Vibração tátil de ativação
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    
+    // Abrir modal de respiração
+    setShowBreathingModal(true);
   };
 
   const handleCheckInPress = () => {
@@ -69,6 +55,10 @@ export const HomeScreen = ({ navigation, route }) => {
 
   const handleProfile = () => {
     navigation.navigate('Profile');
+  };
+
+  const handleHistory = () => {
+    navigation.navigate('History');
   };
 
   if (showTechnique && technique) {
@@ -127,6 +117,18 @@ export const HomeScreen = ({ navigation, route }) => {
           </Text>
         </TouchableOpacity>
 
+        {/* History Button */}
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={handleHistory}
+        >
+          <Text style={styles.secondaryButtonEmoji}>📊</Text>
+          <Text style={styles.secondaryButtonText}>Meu Histórico</Text>
+          <Text style={styles.secondaryButtonSubtext}>
+            Veja seu humor nos últimos 7 dias
+          </Text>
+        </TouchableOpacity>
+
         {/* Profile Button */}
         <TouchableOpacity
           style={styles.profileButton}
@@ -144,6 +146,32 @@ export const HomeScreen = ({ navigation, route }) => {
         visible={loading}
         message="Ativando suporte..."
       />
+
+      {/* Breathing Modal */}
+      <Modal
+        visible={showBreathingModal}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowBreathingModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>🌬️ Respiração de Emergência</Text>
+            <Text style={styles.modalSubtitle}>
+              Siga o ritmo da animação abaixo
+            </Text>
+            
+            <BreathingGuide technique={{ nome: '4-4-4', descricao: 'Inspire 4s, Segure 4s, Expire 4s' }} />
+            
+            <TouchableOpacity
+              style={styles.closeModalButton}
+              onPress={() => setShowBreathingModal(false)}
+            >
+              <Text style={styles.closeModalButtonText}>Fechar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -232,6 +260,47 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
   returnButtonText: {
+    ...typography.body,
+    color: colors.surface,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: spacing.xl,
+    margin: spacing.lg,
+    alignItems: 'center',
+    width: '90%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    ...typography.h2,
+    color: colors.primary,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  modalSubtitle: {
+    ...typography.body,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
+  closeModalButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    marginTop: spacing.lg,
+    width: '100%',
+  },
+  closeModalButtonText: {
     ...typography.body,
     color: colors.surface,
     fontWeight: '600',
