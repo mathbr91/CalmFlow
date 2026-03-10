@@ -19,8 +19,12 @@ SECRET_KEY = config(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-# ⚠️ DESENVOLVIMENTO: Permite todos os hosts (desabilitar em produção)
-ALLOWED_HOSTS = ['*']
+# 🔒 Segurança: restringe hosts permitidos
+# Em produção, defina ENV var ALLOWED_HOSTS com virgulas
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,192.168.1.19')
+ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS.split(',') if h.strip()]
+
+# no DEBUG ainda permitimos localhost e rede local
 
 # Application definition
 INSTALLED_APPS = [
@@ -45,7 +49,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    # 'django.middleware.csrf.CsrfViewMiddleware',  # ⚠️ Desabilitado para API anônima (Expo Go)
+    'django.middleware.csrf.CsrfViewMiddleware',  # CSRF reativado para proteção
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -153,8 +157,13 @@ SIMPLE_JWT = {
 # ==================
 # CORS Configuration
 # ==================
-# ⚠️ DESENVOLVIMENTO: Permite TODOS os origins
-CORS_ALLOW_ALL_ORIGINS = True
+# Em desenvolvimento liberamos, em produção usamos ALLOWED_HOSTS
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    CORS_ALLOW_ALL_ORIGINS = False
+    # construir lista de origins a partir de hosts
+    CORS_ALLOWED_ORIGINS = [f"http://{h}" for h in ALLOWED_HOSTS]
 
 CORS_ALLOW_CREDENTIALS = True
 
