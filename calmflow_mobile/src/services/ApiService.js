@@ -11,22 +11,27 @@ import { Platform } from 'react-native';
 
 /**
  * 🎯 DETECÇÃO INTELIGENTE DE API_BASE_URL
- * - Navegador (Web): http://127.0.0.1:8000/api/v1
- * - Celular (Expo Go): http://192.168.1.19:8000/api/v1
+ * - Navegador (Web): http://127.0.0.1:8000/api
+ * - Celular (Expo Go): http://192.168.1.19:8000/api
  */
 function getApiBaseUrl() {
+  const normalizeBaseUrl = (url) =>
+    url
+      .replace(/\/api\/v1\/?$/i, '/api')
+      .replace(/\/+$/, '');
+
   // Se houver configuração no app.json/Constants
   if (Constants.expoConfig?.extra?.API_BASE_URL) {
-    return Constants.expoConfig.extra.API_BASE_URL;
+    return normalizeBaseUrl(Constants.expoConfig.extra.API_BASE_URL);
   }
 
   // Detecta o ambiente
   if (Platform.OS === 'web') {
     // Navegador: usa localhost
-    return 'http://127.0.0.1:8000/api/v1';
+    return 'http://127.0.0.1:8000/api';
   } else {
     // Mobile (iOS/Android com Expo Go): usa IP da rede local
-    return 'http://192.168.1.19:8000/api/v1';
+    return 'http://192.168.1.19:8000/api';
   }
 }
 
@@ -122,7 +127,7 @@ class ApiService {
 
   async login(email, password) {
     const response = await this.client.post('/token/', {
-      email,
+      username: email,
       password,
     });
 
@@ -147,6 +152,30 @@ class ApiService {
 
   async getProfile() {
     const response = await this.client.get('/profile/');
+    return response.data;
+  }
+
+  /**
+   * MÉTODOS GENÉRICOS PARA REQUISIÇÕES
+   */
+
+  async get(endpoint) {
+    const response = await this.client.get(endpoint);
+    return response.data;
+  }
+
+  async post(endpoint, data) {
+    const response = await this.client.post(endpoint, data);
+    return response.data;
+  }
+
+  async put(endpoint, data) {
+    const response = await this.client.put(endpoint, data);
+    return response.data;
+  }
+
+  async delete(endpoint) {
+    const response = await this.client.delete(endpoint);
     return response.data;
   }
 

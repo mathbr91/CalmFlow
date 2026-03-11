@@ -11,14 +11,21 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ScrollView,
+  TextInput,
+  Alert,
 } from 'react-native';
 import { colors, spacing, typography } from '../themes';
 import { LoadingOverlay, Disclaimer } from '../components';
 import { apiService } from '../services/ApiService';
 
+import { AuthContext } from '../AuthContext';
+
 export const ProfileScreen = ({ navigation }) => {
+  const { logout } = React.useContext(AuthContext);
   const [user, setUser] = useState(null);
+  const [contato_apoio, setContatoApoio] = useState('');
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -26,8 +33,9 @@ export const ProfileScreen = ({ navigation }) => {
 
   const loadProfile = async () => {
     try {
-      const response = await apiService.getProfile();
+      const response = await apiService.get('/api/profile-extended/');
       setUser(response);
+      setContatoApoio(response.contato_apoio || '');
     } catch (error) {
       console.error('[ProfileScreen] Erro ao carregar perfil:', error);
     } finally {
@@ -35,8 +43,24 @@ export const ProfileScreen = ({ navigation }) => {
     }
   };
 
+  const handleSaveContact = async () => {
+    setSaving(true);
+    try {
+      const response = await apiService.put('/api/profile-extended/', {
+        contato_apoio: contato_apoio,
+      });
+      setUser(response);
+      Alert.alert('✅ Sucesso', 'Contato de apoio atualizado com sucesso!');
+    } catch (error) {
+      console.error('[ProfileScreen] Erro ao salvar contato:', error);
+      Alert.alert('❌ Erro', 'Não foi possível atualizar o contato.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleLogout = async () => {
-    await apiService.logout();
+    await logout();
     navigation.replace('Login');
   };
 
@@ -76,6 +100,33 @@ export const ProfileScreen = ({ navigation }) => {
             <Text style={styles.userEmail}>{user.email}</Text>
             <Text style={styles.userId}>ID: {user.id}</Text>
           </View>
+        </View>
+
+        {/* Contato de Apoio Section */}
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>📞 Contato de Apoio</Text>
+          <Text style={styles.sectionDescription}>
+            Deixe um número para contato em caso de crise
+          </Text>
+          
+          <TextInput
+            style={styles.input}
+            placeholder="Ex: +55 11 98765-4321"
+            value={contato_apoio}
+            onChangeText={setContatoApoio}
+            placeholderTextColor={colors.textLight}
+            editable={!saving}
+          />
+          
+          <TouchableOpacity
+            style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+            onPress={handleSaveContact}
+            disabled={saving}
+          >
+            <Text style={styles.saveButtonText}>
+              {saving ? '⏳ Salvando...' : '💾 Salvar Contato'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Stats */}
@@ -242,5 +293,48 @@ const styles = StyleSheet.create({
   },
   disclaimer: {
     marginTop: spacing.xl,
+  },
+  sectionContainer: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.secondary,
+  },
+  sectionTitle: {
+    ...typography.h3,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  sectionDescription: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+  },
+  input: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.md,
+    ...typography.body,
+    color: colors.textPrimary,
+  },
+  saveButton: {
+    backgroundColor: colors.secondary,
+    borderRadius: 8,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
+  },
+  saveButtonText: {
+    ...typography.body,
+    color: colors.background,
+    fontWeight: '700',
   },
 });

@@ -142,3 +142,31 @@ class Emergencia(models.Model):
         usuario_str = self.usuario.username if self.usuario else 'Anônimo'
         sintoma_display = dict(self.SINTOMA_PRINCIPAL_CHOICES).get(self.sintoma_principal, 'Desconhecido')
         return f'Emergência {sintoma_display} - {usuario_str} em {self.criado_em.strftime("%d/%m/%Y %H:%M")}'
+
+
+class UserProfile(models.Model):
+    """
+    Perfil estendido do usuário.
+    Armazena informações adicionais como contato de apoio para crises.
+    """
+    usuario = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='profile'
+    )
+    
+    contato_apoio = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text='Número de telefone para contato em caso de crise (ex: +5511999999999)'
+    )
+    
+    atualizado_em = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Perfil do Usuário'
+        verbose_name_plural = 'Perfis do Usuário'
+    
+    def __str__(self):
+        return f'Perfil - {self.usuario.username}'
+

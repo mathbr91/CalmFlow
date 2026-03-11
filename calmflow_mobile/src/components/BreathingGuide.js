@@ -22,12 +22,12 @@ export const BreathingGuide = ({ technique }) => {
   useEffect(() => {
     if (!technique) return;
 
-    // Ciclo de respiração simples: Inspire 4s → Segure 4s → Expire 4s → Segure 4s
+    // Inspire → Segure (estático) → Expire → Aguarde (estático)
     const sequence = [
-      { phase: 'inhale', duration: 4000 },
-      { phase: 'hold', duration: 4000 },
-      { phase: 'exhale', duration: 4000 },
-      { phase: 'hold', duration: 4000 },
+      { phase: 'inhale', duration: 4000, toValue: 1.2 },
+      { phase: 'hold',   duration: 4000, toValue: null },  // parado em 1.2
+      { phase: 'exhale', duration: 4000, toValue: 0.8 },
+      { phase: 'wait',   duration: 4000, toValue: null },  // parado em 0.8
     ];
 
     let currentStep = 0;
@@ -36,12 +36,14 @@ export const BreathingGuide = ({ technique }) => {
       const currentPhase = sequence[currentStep];
       setBreathingPhase(currentPhase.phase);
 
-      // Anima o círculo
-      Animated.timing(scaleAnim, {
-        toValue: currentPhase.phase === 'inhale' || currentPhase.phase === 'hold-after-inhale' ? 1.2 : 0.8,
-        duration: currentPhase.duration,
-        useNativeDriver: true,
-      }).start();
+      // Anima apenas nas fases de movimento; nas de espera mantém valor atual
+      if (currentPhase.toValue !== null) {
+        Animated.timing(scaleAnim, {
+          toValue: currentPhase.toValue,
+          duration: currentPhase.duration,
+          useNativeDriver: true,
+        }).start();
+      }
 
       currentStep = (currentStep + 1) % sequence.length;
 
@@ -73,8 +75,9 @@ export const BreathingGuide = ({ technique }) => {
       >
         <Text style={styles.phaseText}>
           {breathingPhase === 'inhale' && '🌬️ Inspire'}
-          {breathingPhase === 'hold' && '⏸️ Segure'}
+          {breathingPhase === 'hold'   && '⏸️ Segure'}
           {breathingPhase === 'exhale' && '😤 Expire'}
+          {breathingPhase === 'wait'   && '🌿 Aguarde'}
         </Text>
       </Animated.View>
 

@@ -19,11 +19,31 @@ import { colors, spacing, typography } from '../themes';
 import { LoadingOverlay, Disclaimer } from '../components';
 import { apiService } from '../services/ApiService';
 
+import { AuthContext } from '../AuthContext';
+
 export const LoginScreen = ({ navigation }) => {
+  const { login } = React.useContext(AuthContext);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // traduz mensagens de erro da API para português mais acolhedor
+  const translateError = (msg) => {
+    if (!msg) return '';
+    if (msg.toLowerCase().includes('invalid credentials'))
+      return 'Ops! E-mail ou senha incorretos. Vamos tentar de novo?';
+    if (msg.toLowerCase().includes('no active account'))
+      return 'Ops! E-mail ou senha incorretos. Vamos tentar de novo?';
+    if (msg.toLowerCase().includes('email') && msg.toLowerCase().includes('already'))
+      return 'Este e-mail já está em uso. Tente outro.';
+    if (msg.toLowerCase().includes('username') && msg.toLowerCase().includes('already'))
+      return 'Nome de usuário indisponível. Escolha outro.';
+    if (msg.toLowerCase().includes('this field is required'))
+      return 'Faltou preencher um campo obrigatório.';
+    // caso geral retorna a mensagem original
+    return msg;
+  }
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -36,11 +56,18 @@ export const LoginScreen = ({ navigation }) => {
 
     try {
       const response = await apiService.login(email, password);
+      login();
       navigation.replace('Home');
     } catch (err) {
       console.error('[LoginScreen] Erro de login:', err);
+      const fieldError =
+        err.response?.data?.username?.[0] ||
+        err.response?.data?.email?.[0] ||
+        err.response?.data?.password?.[0] ||
+        err.response?.data?.detail;
       setError(
-        err.response?.data?.detail || 'Falha ao fazer login. Tente novamente.'
+        translateError(fieldError) ||
+          'Falha ao fazer login. Tente novamente.'
       );
     } finally {
       setLoading(false);
@@ -147,7 +174,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: spacing.md,
     paddingVertical: spacing.lg,
   },
   header: {
@@ -167,6 +193,7 @@ const styles = StyleSheet.create({
   },
   form: {
     marginVertical: spacing.lg,
+    paddingHorizontal: spacing.md,
   },
   inputContainer: {
     marginBottom: spacing.lg,

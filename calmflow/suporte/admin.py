@@ -3,7 +3,7 @@ Configuração do admin para os modelos do CalmFlow.
 """
 
 from django.contrib import admin
-from .models import CheckIn, Emergencia
+from .models import CheckIn, Emergencia, UserProfile
 
 
 @admin.register(CheckIn)
@@ -61,3 +61,23 @@ class EmergenciaAdmin(admin.ModelAdmin):
     def get_sintoma_display(self, obj):
         return dict(Emergencia.SINTOMA_PRINCIPAL_CHOICES).get(obj.sintoma_principal, 'Desconhecido')
     get_sintoma_display.short_description = "Sintoma"
+
+
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ('usuario', 'contato_apoio', 'atualizado_em')
+    search_fields = ('usuario__username', 'contato_apoio')
+    readonly_fields = ('atualizado_em',)
+    
+    fieldsets = (
+        ('Usuário', {
+            'fields': ('usuario',)
+        }),
+        ('Informações de Apoio', {
+            'fields': ('contato_apoio',)
+        }),
+        ('Metadata', {
+            'fields': ('atualizado_em',),
+            'classes': ('collapse',)
+        }),
+    )

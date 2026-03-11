@@ -5,17 +5,29 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#3B5BDB"
+    },
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTabletMode": true,
-      "bundleIdentifier": "com.calmflow.app"
+      "bundleIdentifier": "com.calmflow.app",
+      "infoPlist": {
+        "UIStatusBarStyle": "UIStatusBarStyleLightContent"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.calmflow.app"
+      "package": "com.calmflow.app",
+      "statusBar": {
+        "backgroundColor": "#3B5BDB",
+        "barStyle": "light-content"
+      }
     },
     "web": {
       "bundleUrl": "http://192.168.1.19:19006"
@@ -25,7 +37,7 @@
       "API_BASE_URL": "http://192.168.1.19:8000/api/v1",
       "API_TIMEOUT": 10000,
       "eas": {
-        "projectId": "seu-eas-project-id"
+        "projectId": "f36df068-7b54-4dfd-b62e-1ce2b02e050f"
       }
     }
   }

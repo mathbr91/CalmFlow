@@ -9,7 +9,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .serializers_auth import RegisterSerializer, CustomTokenObtainPairSerializer
+from .serializers_auth import RegisterSerializer, CustomTokenObtainPairSerializer, UserProfileSerializer
+from .models import UserProfile
 
 
 class RegisterView(APIView):
@@ -117,3 +118,69 @@ def profile_view(request):
         'ultimo_nome': user.last_name or '',
         'date_joined': user.date_joined,
     })
+
+
+class UserProfileView(APIView):
+    """
+    View para gerenciar o perfil estendido do usuário (contato_apoio).
+    
+    GET /api/profile-extended/
+    Response 200:
+    {
+        "id": 1,
+        "username": "joao",
+        "email": "joao@example.com",
+        "first_name": "João",
+        "contato_apoio": "+55 11 98765-4321"
+    }
+    
+    PUT /api/profile-extended/
+    {
+        "contato_apoio": "+55 11 98765-4321"
+    }
+    
+    Response 200:
+    {
+        "id": 1,
+        "username": "joao",
+        "email": "joao@example.com",
+        "first_name": "João",
+        "contato_apoio": "+55 11 98765-4321",
+        "message": "Perfil atualizado com sucesso!"
+    }
+    """
+    
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """Retorna o perfil do usuário com contato_apoio"""
+        user = request.user
+        profile, created = UserProfile.objects.get_or_create(usuario=user)
+        
+        return Response({
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'contato_apoio': profile.contato_apoio or '',
+        })
+    
+    def put(self, request):
+        """Atualiza o contato_apoio do usuário"""
+        user = request.user
+        profile, created = UserProfile.objects.get_or_create(usuario=user)
+        
+        serializer = UserProfileSerializer(profile, data=request.data, partial=True)
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'contato_apoio': profile.contato_apoio,
+                'message': 'Perfil atualizado com sucesso!'
+            }, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

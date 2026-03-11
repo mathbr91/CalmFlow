@@ -25,7 +25,16 @@ export const HistoryScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadHistory();
+    const checkAuthAndLoad = async () => {
+      try {
+        await apiService.getProfile();
+        loadHistory();
+      } catch (err) {
+        console.warn('[HistoryScreen] usuário não autenticado', err.message);
+        navigation.replace('Login');
+      }
+    };
+    checkAuthAndLoad();
   }, []);
 
   const loadHistory = async () => {

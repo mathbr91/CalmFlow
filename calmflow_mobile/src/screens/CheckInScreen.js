@@ -13,6 +13,8 @@ import {
   ScrollView,
   TextInput,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { colors, spacing, typography } from '../themes';
@@ -302,26 +304,29 @@ export const CheckInScreen = ({ navigation }) => {
       
       case 'text':
         return (
-          <View style={styles.textContainer}>
-            <TextInput
-              style={styles.textInput}
-              placeholder={question.placeholder}
-              value={textInput}
-              onChangeText={setTextInput}
-              multiline
-              numberOfLines={4}
-              placeholderTextColor={colors.textSecondary}
-            />
-            <TouchableOpacity
-              style={[styles.nextButton, !textInput.trim() && styles.nextButtonDisabled]}
-              onPress={handleTextSubmit}
-              disabled={!textInput.trim()}
-            >
-              <Text style={[styles.nextButtonText, !textInput.trim() && styles.nextButtonTextDisabled]}>
-                {currentQuestion === QUESTIONS.length - 1 ? 'Finalizar' : 'Próximo'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          >
+            <View style={styles.textContainer}>
+              <TextInput
+                style={styles.textInput}
+                placeholder={question.placeholder}
+                value={textInput}
+                onChangeText={setTextInput}
+                multiline
+                numberOfLines={4}
+                placeholderTextColor={colors.textSecondary}
+              />
+              <TouchableOpacity
+                style={styles.nextButton}
+                onPress={handleTextSubmit}
+              >
+                <Text style={styles.nextButtonText}>
+                  {currentQuestion === QUESTIONS.length - 1 ? 'Finalizar' : 'Próximo'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
         );
       
       default:
@@ -408,21 +413,6 @@ export const CheckInScreen = ({ navigation }) => {
       </Modal>
 
       {/* Loading Overlay */}
-      <LoadingOverlay visible={loading} message="Salvando respostas..." />
-    </SafeAreaView>
-  );
-          <TouchableOpacity
-            style={styles.skipButton}
-            onPress={handleSkip}
-          >
-            <Text style={styles.skipButtonText}>Pular esta pergunta</Text>
-          </TouchableOpacity>
-        )}
-
-        {/* Disclaimer */}
-        <Disclaimer style={styles.disclaimer} />
-      </ScrollView>
-
       <LoadingOverlay visible={loading} message="Salvando respostas..." />
     </SafeAreaView>
   );
@@ -607,46 +597,5 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     paddingHorizontal: spacing.md,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    padding: spacing.xl,
-    margin: spacing.lg,
-    alignItems: 'center',
-    width: '90%',
-    maxWidth: 400,
-  },
-  modalTitle: {
-    ...typography.h2,
-    color: colors.primary,
-    textAlign: 'center',
-    marginBottom: spacing.md,
-  },
-  modalMessage: {
-    ...typography.body,
-    color: colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: spacing.xl,
-    lineHeight: 24,
-  },
-  modalButton: {
-    backgroundColor: colors.secondary,
-    borderRadius: 8,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    alignItems: 'center',
-    width: '100%',
-  },
-  modalButtonText: {
-    ...typography.body,
-    color: colors.surface,
-    fontWeight: '600',
   },
 });

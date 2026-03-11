@@ -19,7 +19,10 @@ import { colors, spacing, typography } from '../themes';
 import { LoadingOverlay, Disclaimer } from '../components';
 import { apiService } from '../services/ApiService';
 
+import { AuthContext } from '../AuthContext';
+
 export const RegisterScreen = ({ navigation }) => {
+  const { login } = React.useContext(AuthContext);
   const [firstName, setFirstName] = useState('');
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
@@ -27,6 +30,18 @@ export const RegisterScreen = ({ navigation }) => {
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const translateError = (msg) => {
+    if (!msg) return '';
+    msg = msg.toLowerCase();
+    if (msg.includes('email') && msg.includes('already'))
+      return 'Este e-mail já está em uso. Use outro.';
+    if (msg.includes('username') && msg.includes('already'))
+      return 'Nome de usuário indisponível. Escolha outro.';
+    if (msg.includes('password') && msg.includes('too short'))
+      return 'A senha é muito curta. Mínimo 8 caracteres.';
+    return msg;
+  };
 
   const validateForm = () => {
     if (!firstName || !email || !username || !password) {
@@ -58,14 +73,16 @@ export const RegisterScreen = ({ navigation }) => {
       await apiService.register(email, password, username, firstName);
       // Faz login automaticamente
       await apiService.login(email, password);
+      login();
       navigation.replace('Home');
     } catch (err) {
       console.error('[RegisterScreen] Erro de registro:', err);
-      const errorMsg = err.response?.data?.email?.[0] ||
-                       err.response?.data?.username?.[0] ||
-                       err.response?.data?.detail ||
-                       'Falha ao criar conta. Tente novamente.';
-      setError(errorMsg);
+      const raw =
+        err.response?.data?.email?.[0] ||
+        err.response?.data?.username?.[0] ||
+        err.response?.data?.detail ||
+        'Falha ao criar conta. Tente novamente.';
+      setError(translateError(raw));
     } finally {
       setLoading(false);
     }

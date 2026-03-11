@@ -9,7 +9,7 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/v1/', include('suporte.urls')),
+    path('api/', include('suporte.urls')),
 ]
 
 if settings.DEBUG:

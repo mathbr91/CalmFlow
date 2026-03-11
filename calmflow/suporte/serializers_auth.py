@@ -7,6 +7,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from .models import UserProfile
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -121,3 +122,12 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         })
         
         return data
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    """Serializer para o perfil estendido do usuário"""
+    
+    class Meta:
+        model = UserProfile
+        fields = ['contato_apoio']
+
