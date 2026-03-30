@@ -4,6 +4,7 @@ Utilizados para validação e transformação dos dados da API.
 Suporte multiidioma para disclaimers jurídicos.
 """
 
+from django.utils import timezone
 from rest_framework import serializers
 from .models import CheckIn, Emergencia
 from .utils import obter_tecnica_por_sintoma, obter_disclaimer_jurídico
@@ -77,6 +78,16 @@ class CheckInSerializer(serializers.ModelSerializer):
             'gatilho_display',
         ]
 
+    def validate(self, attrs):
+        request = self.context.get('request')
+        if request and request.user and request.user.is_authenticated and self.instance is None:
+            today = timezone.localdate()
+            if CheckIn.objects.filter(usuario=request.user, criado_em__date=today).exists():
+                raise serializers.ValidationError({
+                    'detail': 'Você já cuidou de si hoje! Volte amanhã para sua jornada.'
+                })
+        return attrs
+
 
 class EmergenciaSerializer(serializers.ModelSerializer):
     usuario_nome = serializers.SerializerMethodField()
@@ -92,7 +103,11 @@ class EmergenciaSerializer(serializers.ModelSerializer):
             'usuario_nome',
             'sintoma_principal',
             'sintoma_display',
+            'tipo_evento',
             'ambiente_seguro',
+            'tecnica_utilizada',
+            'alivio_percebido',
+            'duracao_segundos',
             'criado_em',
             'tecnica_sugerida',
             'disclaimer',

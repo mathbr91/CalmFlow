@@ -112,59 +112,19 @@ def obter_tecnica_por_sintoma(sintoma):
     return TECNICAS_SINTOMA.get(sintoma, TECNICAS_SINTOMA['outro'])
 
 
-# Dados mock de SOS
-DADOS_SOS = {
-    'cvv': {
-        'numero': '188',
-        'descricao': 'Centro de Valorização da Vida',
-        'disponivel': '24 horas por dia, 7 dias por semana',
-        'tipo': 'Prevenção ao suicídio - Escuta especializada',
-        'acesso': 'Ligue de forma anônima',
-    },
-    'emergencias': {
-        'numero': '911',
-        'descricao': 'Emergência Médica',
-        'disponivel': '24 horas',
-        'tipo': 'Ambulância e atendimento emergencial',
-        'acesso': 'Ligue imediatamente'
-    },
-    'hospitais_proximos': [
-        {
-            'nome': 'Hospital Clínico Central',
-            'endereco': 'Avenida Paulista, 1000 - São Paulo, SP',
-            'telefone': '(11) 3000-1000',
-            'distancia': '2.3 km',
-            'tempo_medio': '15 min',
-            'servicos': ['Pronto Socorro', 'UTI', 'Psicologia', 'Urgência 24h']
-        },
-        {
-            'nome': 'Instituto de Saúde Mental',
-            'endereco': 'Rua Augusta, 500 - São Paulo, SP',
-            'telefone': '(11) 3100-5000',
-            'distancia': '3.5 km',
-            'tempo_medio': '25 min',
-            'servicos': ['Atendimento Psiquiátrico', 'Terapia', 'Acolhimento 24h']
-        },
-        {
-            'nome': 'Hospital de Medicina de Urgência',
-            'endereco': 'Rua da Consolação, 800 - São Paulo, SP',
-            'telefone': '(11) 3200-9999',
-            'distancia': '1.8 km',
-            'tempo_medio': '10 min',
-            'servicos': ['Pronto Socorro', 'Atendimento Rápido', 'Cardiologia']
-        }
-    ]
-}
-
-
 def obter_dados_sos():
     """
-    Retorna informações de SOS com números de emergência e hospitais próximos.
-    
+    Retorna estrutura mínima para o endpoint /sos/.
+    Dados geográficos reais (hospitais próximos) serão implementados
+    futuramente via GPS + Google Places API.
+
     Returns:
-        dict: Dicionário com CVV, emergências e localizações de hospitais
+        dict: Dicionário com instruções de emergência
     """
-    return DADOS_SOS
+    return {
+        'instrucao': 'Em caso de emergência, entre em contato com os serviços de emergência da sua região.',
+        'hospitais_proximos': [],
+    }
 
 
 def obter_disclaimer_jurídico(idioma='pt-br'):

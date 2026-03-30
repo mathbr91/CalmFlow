@@ -14,6 +14,8 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, typography } from '../themes';
 import { LoadingOverlay, Disclaimer } from '../components';
 import { apiService } from '../services/ApiService';
@@ -24,23 +26,68 @@ export const ProfileScreen = ({ navigation }) => {
   const { logout } = React.useContext(AuthContext);
   const [user, setUser] = useState(null);
   const [contato_apoio, setContatoApoio] = useState('');
+  const [nome_contato_apoio, setNomeContatoApoio] = useState('');
+  const [vinculo_contato_apoio, setVinculoContatoApoio] = useState('');
+  const [totalCheckinsReal, setTotalCheckinsReal] = useState(0);
+  const [streakReal, setStreakReal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadProfile();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      loadProfile();
+      return undefined;
+    }, [])
+  );
 
   const loadProfile = async () => {
+    setLoading(true);
     try {
-      const response = await apiService.get('/profile-extended/');
+      const response = await apiService.getProfileExtended();
+
       setUser(response);
       setContatoApoio(response.contato_apoio || '');
+      setNomeContatoApoio(response.nome_contato_apoio || '');
+      setVinculoContatoApoio(response.vinculo_contato_apoio || '');
+      setTotalCheckinsReal(Number(response.total_checkins || 0));
+      setStreakReal(Number(response.streak_dias || 0));
     } catch (error) {
       // Fallback para endpoint de perfil simples caso profile-extended falhe
       try {
-        const fallback = await apiService.getProfile();
+        const [fallback, checkIns, emergencias] = await Promise.all([
+          apiService.getProfile(),
+          apiService.getCheckIns(),
+          apiService.getEmergencias(),
+        ]);
         setUser(fallback);
+
+        const checkInsList = Array.isArray(checkIns) ? checkIns : [];
+        const emergenciasList = Array.isArray(emergencias) ? emergencias : [];
+        const diasAtivos = new Set();
+
+        checkInsList.forEach((item) => {
+          if (item?.criado_em) {
+            diasAtivos.add(new Date(item.criado_em).toDateString());
+          }
+        });
+
+        emergenciasList.forEach((item) => {
+          if (item?.criado_em) {
+            diasAtivos.add(new Date(item.criado_em).toDateString());
+          }
+        });
+
+        setTotalCheckinsReal(diasAtivos.size);
+
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        let streak = 0;
+        let cursor = new Date(hoje);
+        while (diasAtivos.has(cursor.toDateString())) {
+          streak += 1;
+          cursor.setDate(cursor.getDate() - 1);
+        }
+        setStreakReal(streak);
       } catch (e) {
         console.error('[ProfileScreen] Erro ao carregar perfil:', e);
       }
@@ -52,11 +99,15 @@ export const ProfileScreen = ({ navigation }) => {
   const handleSaveContact = async () => {
     setSaving(true);
     try {
-      const response = await apiService.put('/profile-extended/', {
+      const response = await apiService.updateProfileExtended({
         contato_apoio: contato_apoio,
+        nome_contato_apoio: nome_contato_apoio,
+        vinculo_contato_apoio: vinculo_contato_apoio,
       });
       setUser(response);
-      Alert.alert('✅ Sucesso', 'Contato de apoio atualizado com sucesso!');
+      setNomeContatoApoio(response.nome_contato_apoio || '');
+      setVinculoContatoApoio(response.vinculo_contato_apoio || '');
+      Alert.alert('✅ Sucesso', 'Contato de emergência atualizado com sucesso!');
     } catch (error) {
       console.error('[ProfileScreen] Erro ao salvar contato:', error);
       Alert.alert('❌ Erro', 'Não foi possível atualizar o contato.');
@@ -75,6 +126,10 @@ export const ProfileScreen = ({ navigation }) => {
           text: 'Sair',
           style: 'destructive',
           onPress: async () => {
+            await Promise.all([
+              AsyncStorage.removeItem('access_token'),
+              AsyncStorage.removeItem('refresh_token'),
+            ]);
             await logout();
             navigation.replace('Login');
           },
@@ -123,10 +178,28 @@ export const ProfileScreen = ({ navigation }) => {
 
         {/* Contato de Apoio Section */}
         <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>📞 Contato de Apoio</Text>
+          <Text style={styles.sectionTitle}>📞 Contato de Emergência</Text>
           <Text style={styles.sectionDescription}>
-            Deixe um número para contato em caso de crise
+            Configure a pessoa de confiança para situações de crise
           </Text>
+
+          <TextInput
+            style={styles.input}
+            placeholder="Nome do Contato"
+            value={nome_contato_apoio}
+            onChangeText={setNomeContatoApoio}
+            placeholderTextColor={colors.textLight}
+            editable={!saving}
+          />
+
+          <TextInput
+            style={styles.input}
+            placeholder="Vínculo (ex: Mãe, Amigo, Cônjuge)"
+            value={vinculo_contato_apoio}
+            onChangeText={setVinculoContatoApoio}
+            placeholderTextColor={colors.textLight}
+            editable={!saving}
+          />
           
           <TextInput
             style={styles.input}
@@ -143,7 +216,7 @@ export const ProfileScreen = ({ navigation }) => {
             disabled={saving}
           >
             <Text style={styles.saveButtonText}>
-              {saving ? '⏳ Salvando...' : '💾 Salvar Contato'}
+              {saving ? '⏳ Salvando...' : '💾 Salvar Contato de Emergência'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -152,20 +225,20 @@ export const ProfileScreen = ({ navigation }) => {
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
             <Text style={styles.statEmoji}>🚨</Text>
-            <Text style={styles.statLabel}>Emergências</Text>
-            <Text style={styles.statValue}>--</Text>
+            <Text style={styles.statLabel}>Sessões de Respiração</Text>
+            <Text style={styles.statValue}>{user.sessoes_respiracao ?? 0}</Text>
           </View>
 
           <View style={styles.statCard}>
             <Text style={styles.statEmoji}>📝</Text>
             <Text style={styles.statLabel}>Check-ins</Text>
-            <Text style={styles.statValue}>--</Text>
+            <Text style={styles.statValue}>{totalCheckinsReal}</Text>
           </View>
 
           <View style={styles.statCard}>
             <Text style={styles.statEmoji}>🔥</Text>
-            <Text style={styles.statLabel}>Dias</Text>
-            <Text style={styles.statValue}>--</Text>
+            <Text style={styles.statLabel}>Dias Seguidos</Text>
+            <Text style={styles.statValue}>{streakReal}</Text>
           </View>
         </View>
 

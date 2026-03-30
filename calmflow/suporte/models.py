@@ -105,6 +105,12 @@ class Emergencia(models.Model):
         ('medo', 'Medo Intenso 😨'),
         ('outro', 'Outro'),
     ]
+
+    TIPO_EVENTO_CHOICES = [
+        ('emergencia', 'Emergência'),
+        ('sessao_respiracao', 'Sessão de Respiração'),
+        ('alivio_emergencia', 'Alívio de Emergência'),
+    ]
     
     usuario = models.ForeignKey(
         User,
@@ -120,10 +126,34 @@ class Emergencia(models.Model):
         choices=SINTOMA_PRINCIPAL_CHOICES,
         help_text='Qual é seu sintoma principal neste momento?'
     )
+
+    tipo_evento = models.CharField(
+        max_length=30,
+        choices=TIPO_EVENTO_CHOICES,
+        default='emergencia',
+        help_text='Classifica se foi uma emergência, sessão de respiração ou alívio após técnica'
+    )
     
     ambiente_seguro = models.BooleanField(
         default=True,
         help_text='Você está em um ambiente seguro no momento?'
+    )
+
+    tecnica_utilizada = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text='Técnica aplicada durante a sessão (ex: respiração_quadrada)'
+    )
+
+    alivio_percebido = models.BooleanField(
+        null=True,
+        blank=True,
+        help_text='Resposta do usuário ao final da técnica: sentiu melhora?'
+    )
+
+    duracao_segundos = models.PositiveIntegerField(
+        default=0,
+        help_text='Duração total da sessão ou exercício em segundos'
     )
     
     criado_em = models.DateTimeField(auto_now_add=True)
@@ -159,6 +189,18 @@ class UserProfile(models.Model):
         max_length=20,
         blank=True,
         help_text='Número de telefone para contato em caso de crise (ex: +5511999999999)'
+    )
+
+    nome_contato_apoio = models.CharField(
+        max_length=120,
+        blank=True,
+        help_text='Nome da pessoa que deve ser acionada em caso de crise'
+    )
+
+    vinculo_contato_apoio = models.CharField(
+        max_length=80,
+        blank=True,
+        help_text='Vínculo com a pessoa de apoio (ex: Mãe, Amigo, Cônjuge)'
     )
     
     atualizado_em = models.DateTimeField(auto_now=True)

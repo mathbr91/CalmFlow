@@ -62,15 +62,12 @@ export const PanicButton = ({ onPress, loading = false }) => {
             <ActivityIndicator size="large" color="#FFFFFF" />
           ) : (
             <>
-              <Text style={styles.buttonText}>PRECISO DE</Text>
-              <Text style={styles.buttonText}>AJUDA</Text>
+              <Text style={styles.buttonText}>ATIVAR MODO</Text>
+              <Text style={styles.buttonText}>CALMO</Text>
             </>
           )}
         </TouchableOpacity>
       </Animated.View>
-
-      {/* Shadow para efeito de profundidade */}
-      <View style={styles.shadow} />
     </View>
   );
 };
@@ -108,13 +105,5 @@ const styles = StyleSheet.create({
     ...typography.h2,
     textAlign: 'center',
     fontWeight: '700',
-  },
-  shadow: {
-    position: 'absolute',
-    bottom: -20,
-    width: BUTTON_SIZE * 1.1,
-    height: BUTTON_SIZE * 0.15,
-    backgroundColor: colors.overlay,
-    borderRadius: 50,
   },
 });

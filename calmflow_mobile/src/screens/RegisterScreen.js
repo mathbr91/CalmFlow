@@ -14,6 +14,8 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { colors, spacing, typography } from '../themes';
 import { LoadingOverlay, Disclaimer } from '../components';
@@ -25,26 +27,13 @@ export const RegisterScreen = ({ navigation }) => {
   const { login } = React.useContext(AuthContext);
   const [firstName, setFirstName] = useState('');
   const [email, setEmail] = useState('');
-  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const translateError = (msg) => {
-    if (!msg) return '';
-    msg = msg.toLowerCase();
-    if (msg.includes('email') && msg.includes('already'))
-      return 'Este e-mail já está em uso. Use outro.';
-    if (msg.includes('username') && msg.includes('already'))
-      return 'Nome de usuário indisponível. Escolha outro.';
-    if (msg.includes('password') && msg.includes('too short'))
-      return 'A senha é muito curta. Mínimo 8 caracteres.';
-    return msg;
-  };
-
   const validateForm = () => {
-    if (!firstName || !email || !username || !password) {
+    if (!firstName || !email || !password) {
       setError('Por favor, preencha todos os campos');
       return false;
     }
@@ -70,19 +59,28 @@ export const RegisterScreen = ({ navigation }) => {
     setError('');
 
     try {
-      await apiService.register(email, password, username, firstName);
+      await apiService.register(email, password, firstName);
       // Faz login automaticamente
       await apiService.login(email, password);
       login();
       navigation.replace('Home');
     } catch (err) {
       console.error('[RegisterScreen] Erro de registro:', err);
-      const raw =
-        err.response?.data?.email?.[0] ||
-        err.response?.data?.username?.[0] ||
-        err.response?.data?.detail ||
-        'Falha ao criar conta. Tente novamente.';
-      setError(translateError(raw));
+      const responseData = err?.response?.data || err?.raw?.response?.data || {};
+      const status = err?.status || err?.response?.status || err?.raw?.response?.status;
+      const emailError = responseData?.email?.[0] || responseData?.email;
+
+      if (status === 400 && emailError) {
+        const message = String(emailError);
+        Alert.alert('E-mail já cadastrado', message);
+        setError(message);
+      } else if (status === 500) {
+        const message = 'Instabilidade no servidor, tente novamente em instantes';
+        Alert.alert('Erro no servidor', message);
+        setError(message);
+      } else {
+        setError(err?.userMessage || 'Falha ao criar conta. Tente novamente.');
+      }
     } finally {
       setLoading(false);
     }
@@ -134,20 +132,6 @@ export const RegisterScreen = ({ navigation }) => {
               />
             </View>
 
-            {/* Username */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Nome de Usuário</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="seu_usuario"
-                placeholderTextColor={colors.textLight}
-                value={username}
-                onChangeText={setUsername}
-                editable={!loading}
-                autoCapitalize="none"
-              />
-            </View>
-
             {/* Password */}
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Senha</Text>
@@ -189,9 +173,14 @@ export const RegisterScreen = ({ navigation }) => {
               onPress={handleRegister}
               disabled={loading}
             >
-              <Text style={styles.buttonText}>
-                {loading ? 'Criando conta...' : 'Criar Conta'}
-              </Text>
+              <View style={styles.buttonContent}>
+                {loading && (
+                  <ActivityIndicator size="small" color={colors.surface} style={styles.buttonSpinner} />
+                )}
+                <Text style={styles.buttonText}>
+                  {loading ? 'Criando conta...' : 'Criar Conta'}
+                </Text>
+              </View>
             </TouchableOpacity>
 
             {/* Login Link */}
@@ -284,6 +273,14 @@ const styles = StyleSheet.create({
     ...typography.bodyLarge,
     color: colors.surface,
     fontWeight: '700',
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonSpinner: {
+    marginRight: spacing.sm,
   },
   loginContainer: {
     flexDirection: 'row',

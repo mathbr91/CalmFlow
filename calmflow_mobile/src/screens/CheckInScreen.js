@@ -3,7 +3,7 @@
  * Formulário de 8 perguntas para avaliar bem-estar
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -21,191 +21,394 @@ import { colors, spacing, typography } from '../themes';
 import { LoadingOverlay, Disclaimer } from '../components';
 import { apiService } from '../services/ApiService';
 
-// ──────────────────────────────────────────────────────────
-// Pool de perguntas — 4 obrigatórias + 11 opcionais (total 15)
-// A cada sessão são sorteadas 8: as 4 obrigatórias + 4 opcionais
-// ──────────────────────────────────────────────────────────
-const REQUIRED_QUESTIONS = [
+const QUESTIONS_PER_DAY = 8;
+const DAYS_WITHOUT_REPEAT = 31;
+const EXPECTED_POOL_SIZE = QUESTIONS_PER_DAY * DAYS_WITHOUT_REPEAT;
+
+const DAY_CONTEXTS = [
+  'ao acordar hoje',
+  'no inicio da manha',
+  'durante a manha',
+  'no fim da manha',
+  'logo apos o almoco',
+  'no meio da tarde',
+  'no fim da tarde',
+  'no inicio da noite',
+  'antes de dormir',
+  'apos uma tarefa importante',
+  'apos uma conversa marcante',
+  'apos tempo em redes sociais',
+  'apos uma pausa curta',
+  'apos uma refeicao',
+  'apos um deslocamento',
+  'apos atividade fisica',
+  'apos um momento de silencio',
+  'apos ouvir musica',
+  'apos lidar com um imprevisto',
+  'apos finalizar uma meta',
+  'quando se compara com outras pessoas',
+  'quando pensa no futuro',
+  'quando lembra de algo do passado',
+  'quando esta com muita demanda',
+  'quando percebe seu corpo cansado',
+  'quando nota os pensamentos acelerados',
+  'quando sente necessidade de apoio',
+  'quando esta em ambiente barulhento',
+  'quando tem um momento de calma',
+  'quando algo da errado',
+  'quando algo da certo',
+];
+
+const CATEGORY_DEFINITIONS = [
   {
-    id: 'clima_interno',
-    type: 'choice',
-    emoji: '🌤️',
-    question: 'Como está seu estado emocional interno?',
-    options: [
-      { value: 'ensolarado', label: 'Ensolarado ☀️', description: 'Calmo e positivo' },
-      { value: 'nublado', label: 'Nublado ☁️', description: 'Neutro ou um pouco ansioso' },
-      { value: 'tempestuoso', label: 'Tempestuoso ⛈️', description: 'Muito ansioso ou agitado' },
-      { value: 'neblina', label: 'Neblina 🌫️', description: 'Confuso ou desorientado' },
+    key: 'sono',
+    label: 'Sono',
+    emoji: '😴',
+    templates: [
+      'Como esteve seu sono {context}',
+      'Seu descanso foi reparador {context}',
+      'Ao observar a qualidade do sono {context}, qual foi sua percepcao',
+      'Seu corpo pareceu recuperado pelo sono {context}',
+    ],
+    scaleDescription: 'De 0 (nao descansei) a 10 (descansei muito bem)',
+    textPlaceholder: 'Comente algo sobre sono, despertares ou descanso.',
+    choiceOptions: [
+      { value: 'restaurador', label: 'Restaurador', description: 'Acordei recuperado' },
+      { value: 'regular', label: 'Regular', description: 'Recuperacao parcial' },
+      { value: 'fragmentado', label: 'Fragmentado', description: 'Muitos despertares' },
+      { value: 'insuficiente', label: 'Insuficiente', description: 'Dormir nao foi suficiente' },
     ],
   },
   {
-    id: 'nivel_ruido',
-    type: 'scale',
-    emoji: '🧠',
-    question: 'Qual é o nível de "ruído mental"?',
-    description: 'De 1 (silencioso) a 10 (caótico)',
-    min: 1,
-    max: 10,
-  },
-  {
-    id: 'gatilho',
-    type: 'choice',
-    emoji: '⚡',
-    question: 'Qual foi o gatilho principal do seu estado?',
-    options: [
-      { value: 'trabalho', label: 'Trabalho' },
-      { value: 'familia', label: 'Família' },
-      { value: 'telas', label: 'Telas/Redes Sociais' },
-      { value: 'sono', label: 'Falta de Sono' },
-      { value: 'saude', label: 'Saúde Física' },
-      { value: 'relacionamento', label: 'Relacionamento' },
-      { value: 'financeiro', label: 'Financeiro' },
-      { value: 'desconhecido', label: 'Desconhecido' },
-      { value: 'outro', label: 'Outro' },
+    key: 'humor',
+    label: 'Humor',
+    emoji: '🙂',
+    templates: [
+      'Como voce descreveria seu humor {context}',
+      'Seu estado emocional predominante {context} foi qual',
+      'Seu humor esteve mais estavel ou mais oscilante {context}',
+      'Ao olhar para seu dia, para onde seu humor pendia {context}',
+    ],
+    scaleDescription: 'De 0 (muito baixo) a 10 (muito positivo)',
+    textPlaceholder: 'Descreva em uma frase curta o seu humor hoje.',
+    choiceOptions: [
+      { value: 'positivo', label: 'Positivo', description: 'Predominio de bem-estar' },
+      { value: 'neutro', label: 'Neutro', description: 'Sem grande variacao' },
+      { value: 'instavel', label: 'Instavel', description: 'Oscilacoes importantes' },
+      { value: 'baixo', label: 'Baixo', description: 'Humor reduzido' },
     ],
   },
   {
-    id: 'auto_eficacia',
-    type: 'scale',
-    emoji: '💪',
-    question: 'Nível de confiança em lidar com as emoções',
-    description: 'De 0 (nenhuma confiança) a 10 (muita confiança)',
-    min: 0,
-    max: 10,
+    key: 'fisico',
+    label: 'Fisico',
+    emoji: '🫀',
+    templates: [
+      'Como seu corpo respondeu {context}',
+      'Que sinais fisicos voce percebeu {context}',
+      'Ao observar tensao, respiracao e energia {context}, como estava',
+      'Seu corpo pediu mais cuidado {context}',
+    ],
+    scaleDescription: 'De 0 (muito confortavel) a 10 (muito desconfortavel)',
+    textPlaceholder: 'Descreva sinais fisicos percebidos hoje.',
+    choiceOptions: [
+      { value: 'relaxado', label: 'Relaxado', description: 'Corpo em conforto' },
+      { value: 'tenso', label: 'Tenso', description: 'Rigidez ou aperto' },
+      { value: 'agitado', label: 'Agitado', description: 'Inquietacao corporal' },
+      { value: 'dolorido', label: 'Dolorido', description: 'Dor ou desconforto' },
+    ],
+  },
+  {
+    key: 'social',
+    label: 'Social',
+    emoji: '🤝',
+    templates: [
+      'Como voce percebeu suas relacoes sociais {context}',
+      'Seu sentimento de conexao com outras pessoas {context} foi qual',
+      'A qualidade das suas interacoes sociais {context} foi como',
+      'Ao olhar para apoio e pertencimento {context}, como voce se sentiu',
+    ],
+    scaleDescription: 'De 0 (muito isolado) a 10 (muito conectado)',
+    textPlaceholder: 'Comente uma interacao social marcante do dia.',
+    choiceOptions: [
+      { value: 'conectado', label: 'Conectado', description: 'Interacoes nutritivas' },
+      { value: 'neutro', label: 'Neutro', description: 'Interacoes funcionais' },
+      { value: 'distante', label: 'Distante', description: 'Pouca proximidade emocional' },
+      { value: 'isolado', label: 'Isolado', description: 'Sem suporte percebido' },
+    ],
+  },
+  {
+    key: 'gratidao',
+    label: 'Gratidao',
+    emoji: '🙏',
+    templates: [
+      'Foi facil reconhecer algo bom {context}',
+      'Quao conectado voce se sentiu com gratidao {context}',
+      'Ao olhar para o dia {context}, quanto valor voce percebeu',
+      'A pratica de gratidao teve impacto {context}',
+    ],
+    scaleDescription: 'De 0 (nao consegui perceber) a 10 (percebi muito)',
+    textPlaceholder: 'Cite algo concreto pelo qual voce sente gratidao hoje.',
+    choiceOptions: [
+      { value: 'clara', label: 'Clara', description: 'Percebi varios pontos positivos' },
+      { value: 'pontual', label: 'Pontual', description: 'Percebi algo especifico' },
+      { value: 'dificil', label: 'Dificil', description: 'Foi complicado reconhecer' },
+      { value: 'ausente', label: 'Ausente', description: 'Nao consegui acessar gratidao' },
+    ],
+  },
+  {
+    key: 'trabalho',
+    label: 'Trabalho',
+    emoji: '💼',
+    templates: [
+      'Como o trabalho ou estudos impactaram voce {context}',
+      'Seu nivel de pressao nas tarefas {context} foi qual',
+      'Ao pensar nas demandas de trabalho {context}, como voce ficou',
+      'Seu ritmo de produtividade e cobranca interna {context} foi como',
+    ],
+    scaleDescription: 'De 0 (sem pressao) a 10 (pressao muito alta)',
+    textPlaceholder: 'Escreva o principal fator de pressao ou satisfacao nas tarefas.',
+    choiceOptions: [
+      { value: 'leve', label: 'Leve', description: 'Demanda sob controle' },
+      { value: 'moderado', label: 'Moderado', description: 'Exigente, mas gerenciavel' },
+      { value: 'alto', label: 'Alto', description: 'Impactando energia e humor' },
+      { value: 'sobrecarregado', label: 'Sobrecarregado', description: 'Peso muito grande no dia' },
+    ],
+  },
+  {
+    key: 'foco',
+    label: 'Foco',
+    emoji: '🎯',
+    templates: [
+      'Como esteve seu foco cognitivo {context}',
+      'Sua concentracao em tarefas {context} foi como',
+      'Quao facil foi sustentar atencao {context}',
+      'No aspecto mental, seu foco {context} se manteve',
+    ],
+    scaleDescription: 'De 0 (muito disperso) a 10 (muito focado)',
+    textPlaceholder: 'Conte o que mais ajudou ou atrapalhou sua concentracao.',
+    choiceOptions: [
+      { value: 'alto', label: 'Alto', description: 'Concentracao consistente' },
+      { value: 'medio', label: 'Medio', description: 'Com algumas oscilacoes' },
+      { value: 'baixo', label: 'Baixo', description: 'Dificuldade frequente' },
+      { value: 'quebrado', label: 'Quebrado', description: 'Muitas interrupcoes internas' },
+    ],
+  },
+  {
+    key: 'nutricao',
+    label: 'Nutricao',
+    emoji: '🍽️',
+    templates: [
+      'Como voce cuidou da sua nutricao e nutricao emocional {context}',
+      'Suas escolhas de autocuidado e alimentacao {context} foram suficientes',
+      'Seu repertorio de cuidado interno e energia nutricional {context} esteve presente',
+      'Ao avaliar pausas, limites e alimentacao {context}, como foi',
+    ],
+    scaleDescription: 'De 0 (nao cuidei de mim) a 10 (cuidei muito bem)',
+    textPlaceholder: 'Descreva um gesto de autocuidado emocional praticado hoje.',
+    choiceOptions: [
+      { value: 'consistente', label: 'Consistente', description: 'Cuidados bem aplicados' },
+      { value: 'parcial', label: 'Parcial', description: 'Cuidei de alguns pontos' },
+      { value: 'minimo', label: 'Minimo', description: 'Pouco cuidado emocional' },
+      { value: 'ausente', label: 'Ausente', description: 'Sem autocuidado no periodo' },
+    ],
   },
 ];
 
-const OPTIONAL_POOL = [
-  {
-    id: 'sintomas',
+const buildQuestionByType = (definition, prompt, dayIndex) => {
+  const typeSelector = dayIndex % 3;
+  const baseId = `${definition.key}_${String(dayIndex + 1).padStart(2, '0')}`;
+
+  if (typeSelector === 0) {
+    return {
+      id: `${baseId}_scale`,
+      groupKey: definition.key,
+      groupLabel: definition.label,
+      type: 'scale',
+      emoji: definition.emoji,
+      question: prompt,
+      description: definition.scaleDescription,
+      min: 0,
+      max: 10,
+    };
+  }
+
+  if (typeSelector === 1) {
+    return {
+      id: `${baseId}_choice`,
+      groupKey: definition.key,
+      groupLabel: definition.label,
+      type: 'choice',
+      emoji: definition.emoji,
+      question: prompt,
+      options: definition.choiceOptions,
+    };
+  }
+
+  return {
+    id: `${baseId}_text`,
+    groupKey: definition.key,
+    groupLabel: definition.label,
     type: 'text',
-    emoji: '🤒',
-    question: 'Descreva os sintomas físicos ou emocionais',
-    placeholder: 'Ex: dor de cabeça, taquicardia, medo...',
-  },
-  {
-    id: 'notas',
-    type: 'text',
-    emoji: '📝',
-    question: 'Notas adicionais ou observações',
-    placeholder: 'Qualquer outra coisa que queira compartilhar...',
-  },
-  {
-    id: 'nivel_energia',
-    type: 'scale',
-    emoji: '⚡',
-    question: 'Como está seu nível de energia física agora?',
-    description: 'De 1 (sem energia) a 10 (cheio de energia)',
-    min: 1,
-    max: 10,
-  },
-  {
-    id: 'qualidade_sono',
-    type: 'scale',
-    emoji: '😴',
-    question: 'Como foi a qualidade do seu sono recentemente?',
-    description: 'De 1 (péssimo) a 5 (excelente)',
-    min: 1,
-    max: 5,
-  },
-  {
-    id: 'atividade_fisica',
-    type: 'choice',
-    emoji: '🏃',
-    question: 'Você praticou alguma atividade física hoje?',
-    options: [
-      { value: 'sim_intensa', label: 'Sim, intensa 🔥' },
-      { value: 'sim_leve', label: 'Sim, leve 🚶' },
-      { value: 'nao_planejado', label: 'Não, mas quero 🎯' },
-      { value: 'nao', label: 'Não pratiquei ❌' },
-    ],
-  },
-  {
-    id: 'suporte_social',
-    type: 'choice',
-    emoji: '🤝',
-    question: 'Você tem se sentido apoiado pelas pessoas ao redor?',
-    options: [
-      { value: 'muito', label: 'Muito apoiado 💙' },
-      { value: 'pouco', label: 'Um pouco 🤏' },
-      { value: 'nao', label: 'Não me sinto apoiado 😔' },
-      { value: 'isolado', label: 'Me sinto isolado 😶' },
-    ],
-  },
-  {
-    id: 'foco',
-    type: 'scale',
-    emoji: '🎯',
-    question: 'Qual é seu nível de foco e concentração hoje?',
-    description: 'De 1 (muito disperso) a 10 (totalmente focado)',
-    min: 1,
-    max: 10,
-  },
-  {
-    id: 'corpo_sinais',
-    type: 'choice',
-    emoji: '🫀',
-    question: 'Seu corpo está dando sinais de cuidado?',
-    options: [
-      { value: 'tenso', label: 'Tenso ou contraído 😣' },
-      { value: 'agitado', label: 'Agitado / inquieto 🫨' },
-      { value: 'dor', label: 'Dor ou desconforto 🤕' },
-      { value: 'ok', label: 'Estou bem fisicamente ✅' },
-    ],
-  },
-  {
-    id: 'momento_positivo',
-    type: 'text',
-    emoji: '🌟',
-    question: 'Existe algo positivo no seu dia até agora?',
-    placeholder: 'Pode ser algo pequeno, como um café gostoso ou uma conversa...',
-  },
-  {
-    id: 'expectativa',
-    type: 'choice',
-    emoji: '🔮',
-    question: 'Qual é sua expectativa para as próximas horas?',
-    options: [
-      { value: 'otimista', label: 'Otimista 😊' },
-      { value: 'neutro', label: 'Neutro 😐' },
-      { value: 'apreensivo', label: 'Apreensivo 😟' },
-      { value: 'sobrecarregado', label: 'Sobrecarregado 😩' },
-    ],
-  },
-  {
-    id: 'pensamento_dominante',
-    type: 'choice',
-    emoji: '💭',
-    question: 'Qual pensamento domina sua mente agora?',
-    options: [
-      { value: 'futuro', label: 'Preocupações com o futuro 🔮' },
-      { value: 'passado', label: 'Ruminações do passado ⏪' },
-      { value: 'presente', label: 'Foco no presente ✅' },
-      { value: 'indefinido', label: 'Não consigo definir 🌫️' },
-    ],
-  },
-];
+    emoji: definition.emoji,
+    question: prompt,
+    placeholder: definition.textPlaceholder,
+  };
+};
+
+const QUESTION_GROUPS = CATEGORY_DEFINITIONS.reduce((accumulator, definition) => {
+  accumulator[definition.key] = DAY_CONTEXTS.map((context, dayIndex) => {
+    const template = definition.templates[dayIndex % definition.templates.length];
+    const prompt = template.replace('{context}', context);
+    return buildQuestionByType(definition, prompt, dayIndex);
+  });
+  return accumulator;
+}, {});
+
+const OPTIONAL_POOL = Object.values(QUESTION_GROUPS).flat();
+
+if (OPTIONAL_POOL.length !== EXPECTED_POOL_SIZE) {
+  throw new Error(`OPTIONAL_POOL precisa ter exatamente ${EXPECTED_POOL_SIZE} perguntas.`);
+}
+
+const createSeededRandom = (seed) => {
+  let value = seed >>> 0;
+  return () => {
+    value = (value * 1664525 + 1013904223) % 4294967296;
+    return value / 4294967296;
+  };
+};
+
+const shuffleWithSeed = (array, seed) => {
+  const rng = createSeededRandom(seed);
+  const copy = [...array];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rng() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+};
+
+const getMonthSeed = (date = new Date()) => {
+  return Number(`${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}`);
+};
+
+const getDailyQuestionSet = (date = new Date()) => {
+  const daySlot = Math.min(Math.max(date.getDate(), 1), DAYS_WITHOUT_REPEAT) - 1;
+  const monthSeed = getMonthSeed(date);
+
+  const questions = CATEGORY_DEFINITIONS.map((definition, index) => {
+    const shuffledGroup = shuffleWithSeed(QUESTION_GROUPS[definition.key], monthSeed + index + 1);
+    return shuffledGroup[daySlot];
+  });
+
+  return shuffleWithSeed(questions, monthSeed + daySlot + 99);
+};
 
 export const CheckInScreen = ({ navigation }) => {
-  // Sorteia 4 perguntas opcionais a cada sessão e combina com as 4 obrigatórias
+  // Seleciona 8 perguntas por dia, sem repeticao total ao longo de 31 dias.
   const [activeQuestions] = useState(() => {
-    const shuffled = [...OPTIONAL_POOL].sort(() => Math.random() - 0.5);
-    return [...REQUIRED_QUESTIONS, ...shuffled.slice(0, 4)];
+    return getDailyQuestionSet();
   });
 
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [responses, setResponses] = useState({});
   const [loading, setLoading] = useState(false);
+  const [dailyStatusLoading, setDailyStatusLoading] = useState(true);
+  const [alreadyCheckedInToday, setAlreadyCheckedInToday] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [textInput, setTextInput] = useState('');
   const [smartMessage, setSmartMessage] = useState(null);
   const [showSmartModal, setShowSmartModal] = useState(false);
 
-  const generateSmartMessage = (responses) => {
+  useEffect(() => {
+    const checkDailyStatus = async () => {
+      try {
+        const response = await apiService.getCheckIns();
+        const payload = response?.data ?? response;
+        const checkIns = Array.isArray(payload) ? payload : (payload?.results || []);
+        const today = new Date().toDateString();
+        const hasTodayEntry = checkIns.some((item) => new Date(item.criado_em).toDateString() === today);
+        setAlreadyCheckedInToday(hasTodayEntry);
+      } catch (error) {
+        console.error('[CheckInScreen] Erro ao verificar check-in do dia:', error);
+      } finally {
+        setDailyStatusLoading(false);
+      }
+    };
+
+    checkDailyStatus();
+  }, []);
+
+  const getResponseByGroup = (groupKey) => {
+    const question = activeQuestions.find((item) => item.groupKey === groupKey);
+    return question ? responses[question.id] : undefined;
+  };
+
+  const mapHumorToClima = (humorResponse) => {
+    if (typeof humorResponse === 'number') {
+      if (humorResponse >= 8) return 'ensolarado';
+      if (humorResponse >= 5) return 'nublado';
+      if (humorResponse >= 3) return 'neblina';
+      return 'tempestuoso';
+    }
+
+    const choiceMap = {
+      positivo: 'ensolarado',
+      neutro: 'nublado',
+      instavel: 'neblina',
+      baixo: 'tempestuoso',
+    };
+
+    return choiceMap[humorResponse] || 'nublado';
+  };
+
+  const buildCheckInPayload = () => {
+    const humorResponse = getResponseByGroup('humor');
+    const trabalhoResponse = getResponseByGroup('trabalho');
+    const focoResponse = getResponseByGroup('foco');
+    const fisicoResponse = getResponseByGroup('fisico');
+    const sonoResponse = getResponseByGroup('sono');
+    const nutricaoResponse = getResponseByGroup('nutricao');
+    const socialResponse = getResponseByGroup('social');
+
+    const numericNoiseCandidate = [trabalhoResponse, focoResponse, sonoResponse].find(
+      (value) => typeof value === 'number'
+    );
+    const numericSelfCareCandidate = [nutricaoResponse, focoResponse, humorResponse].find(
+      (value) => typeof value === 'number'
+    );
+
+    const notasExtra = activeQuestions
+      .map((question) => {
+        const value = responses[question.id];
+        if (value === undefined || value === null || value === '') {
+          return null;
+        }
+        return `${question.groupLabel} - ${question.question}: ${value}`;
+      })
+      .filter(Boolean);
+
+    let gatilho = 'desconhecido';
+    if (trabalhoResponse) gatilho = 'trabalho';
+    else if (sonoResponse) gatilho = 'sono';
+    else if (socialResponse) gatilho = 'relacionamento';
+    else if (fisicoResponse || nutricaoResponse) gatilho = 'saude';
+
+    return {
+      clima_interno: mapHumorToClima(humorResponse),
+      nivel_ruido: numericNoiseCandidate !== undefined ? Math.min(Math.max(numericNoiseCandidate, 1), 10) : 5,
+      gatilho,
+      auto_eficacia: numericSelfCareCandidate !== undefined ? Math.min(Math.max(numericSelfCareCandidate, 0), 10) : 5,
+      sintomas: typeof fisicoResponse === 'string' ? fisicoResponse : String(fisicoResponse || ''),
+      notas: notasExtra.join('\n\n'),
+    };
+  };
+
+  const generateSmartMessage = (payload) => {
     const messages = [];
 
     // Verificar nível de ruído mental alto
-    if (responses.nivel_ruido > 8) {
+    if (payload.nivel_ruido > 8) {
       messages.push({
         type: 'high_noise',
         title: '🧠 Mente Acelerada Detectada',
@@ -216,8 +419,8 @@ export const CheckInScreen = ({ navigation }) => {
     }
 
     // Verificar palavras-chave nas notas
-    if (responses.notas) {
-      const notes = responses.notas.toLowerCase();
+    if (payload.notas) {
+      const notes = payload.notas.toLowerCase();
       const keywords = {
         sono: ['sono', 'cansad', 'dormir', 'insônia'],
         trabalho: ['trabalho', 'estresse', 'pressão', 'tarefa'],
@@ -326,36 +529,23 @@ export const CheckInScreen = ({ navigation }) => {
   };
 
   const handleSubmit = async () => {
+    if (alreadyCheckedInToday) {
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Campos obrigatórios com fallback (caso a pergunta tenha sido pulada)
-      const BACKEND_FIELDS = ['clima_interno', 'nivel_ruido', 'gatilho', 'auto_eficacia', 'sintomas', 'notas'];
-      const payload = {
-        clima_interno: responses.clima_interno || 'nublado',
-        nivel_ruido: responses.nivel_ruido !== undefined ? responses.nivel_ruido : 5,
-        gatilho: responses.gatilho || 'desconhecido',
-        auto_eficacia: responses.auto_eficacia !== undefined ? responses.auto_eficacia : 5,
-        sintomas: responses.sintomas || '',
-      };
-
-      // Agrega respostas extras (opcionais/novas) ao campo notas
-      const notasExtra = [];
-      for (const [key, value] of Object.entries(responses)) {
-        if (!BACKEND_FIELDS.includes(key) && value) {
-          const q = activeQuestions.find(aq => aq.id === key);
-          if (q) notasExtra.push(`${q.question}: ${value}`);
-        }
-      }
-      payload.notas = [responses.notas || '', ...notasExtra].filter(Boolean).join('\n\n');
+      const payload = buildCheckInPayload();
 
       await apiService.createCheckIn(payload);
+      setAlreadyCheckedInToday(true);
       await Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Success
       );
 
       // Gerar mensagem inteligente
-      const message = generateSmartMessage(responses);
+      const message = generateSmartMessage(payload);
       if (message) {
         setSmartMessage(message);
         setShowSmartModal(true);
@@ -368,13 +558,39 @@ export const CheckInScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.error('[CheckInScreen] Erro ao enviar check-in:', error);
+      if (error?.backendMessage?.includes('Você já cuidou de si hoje')) {
+        setAlreadyCheckedInToday(true);
+      }
       await Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Error
       );
-      alert('Erro ao salvar respostas. Tente novamente.');
+      alert(error?.userMessage || 'Erro ao salvar respostas. Tente novamente.');
       setLoading(false);
     }
   };
+
+  if (dailyStatusLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <LoadingOverlay visible={true} message="Verificando sua jornada de hoje..." />
+      </SafeAreaView>
+    );
+  }
+
+  if (alreadyCheckedInToday && !completed) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.lockedContainer}>
+          <Text style={styles.lockedEmoji}>🌿</Text>
+          <Text style={styles.lockedTitle}>Você já cuidou de si hoje!</Text>
+          <Text style={styles.lockedText}>Volte amanhã para sua jornada.</Text>
+          <TouchableOpacity style={styles.nextButton} onPress={() => navigation.goBack()}>
+            <Text style={styles.nextButtonText}>Voltar</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (completed) {
     return (
@@ -390,6 +606,7 @@ export const CheckInScreen = ({ navigation }) => {
     );
   }
 
+  const journeyDay = Math.min(Math.max(new Date().getDate(), 1), DAYS_WITHOUT_REPEAT);
   const question = activeQuestions[currentQuestion];
   const progress = ((currentQuestion + 1) / activeQuestions.length) * 100;
 
@@ -476,6 +693,9 @@ export const CheckInScreen = ({ navigation }) => {
           <Text style={styles.progress}>
             {currentQuestion + 1} de {activeQuestions.length}
           </Text>
+          <View style={styles.journeyBadge}>
+            <Text style={styles.journeyBadgeText}>Dia {journeyDay} de 31 da sua jornada</Text>
+          </View>
         </View>
 
         {/* Progress Bar */}
@@ -572,6 +792,21 @@ const styles = StyleSheet.create({
   progress: {
     ...typography.bodySmall,
     color: colors.textSecondary,
+  },
+  journeyBadge: {
+    marginTop: spacing.md,
+    alignSelf: 'flex-start',
+    backgroundColor: `${colors.primary}20`,
+    borderRadius: 999,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderWidth: 1,
+    borderColor: `${colors.primary}35`,
+  },
+  journeyBadgeText: {
+    ...typography.bodySmall,
+    color: colors.primary,
+    fontWeight: '700',
   },
   progressBarContainer: {
     height: 6,
@@ -709,6 +944,28 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  lockedContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  lockedEmoji: {
+    fontSize: 72,
+    marginBottom: spacing.lg,
+  },
+  lockedTitle: {
+    ...typography.h2,
+    color: colors.primary,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  lockedText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
   },
   successEmoji: {
     fontSize: 80,

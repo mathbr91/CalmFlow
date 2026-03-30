@@ -5,3 +5,6 @@ class SuporteConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'suporte'
     verbose_name = 'Suporte Emocional - CalmFlow'
+
+    def ready(self):
+        import suporte.signals  # noqa: F401

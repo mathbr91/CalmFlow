@@ -3,13 +3,11 @@
  * Configuração do React Navigation para o CalmFlow
  */
 
-import React, { useState, useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { apiService } from './services/ApiService';
 import { AuthContext } from './AuthContext';
+import { SplashLoadingScreen } from './components';
 
 import {
   HomeScreen,
@@ -26,11 +24,7 @@ export default function Navigation() {
   const { isAuthenticated } = React.useContext(AuthContext);
 
   if (isAuthenticated === null) {
-    return (
-      <View style={{flex:1,justifyContent:'center',alignItems:'center'}}>
-        <ActivityIndicator size="large" color="#3B5BDB" />
-      </View>
-    );
+    return <SplashLoadingScreen />;
   }
 
   return (

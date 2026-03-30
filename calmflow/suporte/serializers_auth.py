@@ -5,6 +5,7 @@ Utiliza djangorestframework-simplejwt para tokens JWT.
 
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
+from django.db import IntegrityError
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import UserProfile
@@ -29,7 +30,8 @@ class UserSerializer(serializers.ModelSerializer):
 class RegisterSerializer(serializers.ModelSerializer):
     """
     Serializer para registrar novos usuários.
-    Valida: email único, senha forte, campos obrigatórios.
+    Valida senha forte e campos obrigatórios.
+    Unicidade fica sob responsabilidade do banco.
     """
     
     password = serializers.CharField(
@@ -64,29 +66,20 @@ class RegisterSerializer(serializers.ModelSerializer):
                 'allow_blank': False,
             },
             'username': {
-                'required': True,
-                'allow_blank': False,
+                'required': False,
+                'allow_blank': True,
             },
         }
     
-    def validate_email(self, value):
-        """Valida se o email é único"""
-        if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError(
-                "Um usuário com este email já existe."
-            )
-        return value
-    
-    def validate_username(self, value):
-        """Valida se o username é único"""
-        if User.objects.filter(username=value).exists():
-            raise serializers.ValidationError(
-                "Um usuário com este nome de usuário já existe."
-            )
-        return value
-    
     def validate(self, data):
         """Valida se as senhas conferem"""
+        email = (data.get('email') or '').lower().strip()
+
+        # username é sempre idêntico ao email para evitar duplicatas falsas
+        if email:
+            data['email'] = email
+            data['username'] = email
+
         if data.get('password') != data.get('password_confirm'):
             raise serializers.ValidationError({
                 'password_confirm': 'As senhas não conferem.'
@@ -96,8 +89,13 @@ class RegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """Cria um novo usuário"""
         validated_data.pop('password_confirm')
-        user = User.objects.create_user(**validated_data)
-        return user
+        try:
+            user = User.objects.create_user(**validated_data)
+            return user
+        except IntegrityError:
+            raise serializers.ValidationError({
+                'email': ['Este e-mail já está em uso.']
+            })
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -105,8 +103,9 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     Customiza a resposta do token para incluir dados do usuário.
     Adiciona primeiro_nome para UX (saudação personalizada).
     """
-    
+
     def validate(self, attrs):
+        attrs['username'] = (attrs.get('username') or '').lower().strip()
         data = super().validate(attrs)
         
         # Adiciona informações do usuário na resposta
@@ -129,5 +128,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = UserProfile
-        fields = ['contato_apoio']
+        fields = [
+            'contato_apoio',
+            'nome_contato_apoio',
+            'vinculo_contato_apoio',
+        ]
 

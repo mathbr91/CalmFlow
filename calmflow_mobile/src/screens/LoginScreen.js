@@ -14,6 +14,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { colors, spacing, typography } from '../themes';
 import { LoadingOverlay, Disclaimer } from '../components';
@@ -28,23 +29,6 @@ export const LoginScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // traduz mensagens de erro da API para português mais acolhedor
-  const translateError = (msg) => {
-    if (!msg) return '';
-    if (msg.toLowerCase().includes('invalid credentials'))
-      return 'Ops! E-mail ou senha incorretos. Vamos tentar de novo?';
-    if (msg.toLowerCase().includes('no active account'))
-      return 'Ops! E-mail ou senha incorretos. Vamos tentar de novo?';
-    if (msg.toLowerCase().includes('email') && msg.toLowerCase().includes('already'))
-      return 'Este e-mail já está em uso. Tente outro.';
-    if (msg.toLowerCase().includes('username') && msg.toLowerCase().includes('already'))
-      return 'Nome de usuário indisponível. Escolha outro.';
-    if (msg.toLowerCase().includes('this field is required'))
-      return 'Faltou preencher um campo obrigatório.';
-    // caso geral retorna a mensagem original
-    return msg;
-  }
-
   const handleLogin = async () => {
     if (!email || !password) {
       setError('Por favor, preencha todos os campos');
@@ -55,20 +39,13 @@ export const LoginScreen = ({ navigation }) => {
     setError('');
 
     try {
-      const response = await apiService.login(email, password);
+      const usernameForAuth = email.toLowerCase().trim();
+      await apiService.login(usernameForAuth, password);
       login();
       navigation.replace('Home');
     } catch (err) {
       console.error('[LoginScreen] Erro de login:', err);
-      const fieldError =
-        err.response?.data?.username?.[0] ||
-        err.response?.data?.email?.[0] ||
-        err.response?.data?.password?.[0] ||
-        err.response?.data?.detail;
-      setError(
-        translateError(fieldError) ||
-          'Falha ao fazer login. Tente novamente.'
-      );
+      setError(err?.userMessage || 'Falha ao fazer login. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -134,9 +111,14 @@ export const LoginScreen = ({ navigation }) => {
               onPress={handleLogin}
               disabled={loading}
             >
-              <Text style={styles.buttonText}>
-                {loading ? 'Entrando...' : 'Entrar'}
-              </Text>
+              <View style={styles.buttonContent}>
+                {loading && (
+                  <ActivityIndicator size="small" color={colors.surface} style={styles.buttonSpinner} />
+                )}
+                <Text style={styles.buttonText}>
+                  {loading ? 'Entrando...' : 'Entrar'}
+                </Text>
+              </View>
             </TouchableOpacity>
 
             {/* Sign Up Link */}
@@ -238,6 +220,14 @@ const styles = StyleSheet.create({
     ...typography.bodyLarge,
     color: colors.surface,
     fontWeight: '700',
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonSpinner: {
+    marginRight: spacing.sm,
   },
   signupContainer: {
     flexDirection: 'row',
