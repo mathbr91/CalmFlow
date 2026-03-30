@@ -6,6 +6,7 @@ CalmFlow - App de Suporte Emocional & Manejo de Bem-Estar
 import os
 from pathlib import Path
 from decouple import config
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -46,6 +47,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -76,11 +78,13 @@ TEMPLATES = [
 WSGI_APPLICATION = 'calmflow.wsgi.application'
 
 # Database
+# Em produção usa DATABASE_URL (PostgreSQL no Railway)
+# Em desenvolvimento local usa SQLite como fallback
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        conn_max_age=600,
+    )
 }
 
 # Password validation
@@ -108,6 +112,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media files
 MEDIA_URL = '/media/'
@@ -157,30 +162,37 @@ SIMPLE_JWT = {
 # ==================
 # CORS Configuration
 # ==================
-# Em desenvolvimento liberamos, em produção usamos ALLOWED_HOSTS
-if DEBUG:
-    CORS_ALLOW_ALL_ORIGINS = True
-else:
-    CORS_ALLOW_ALL_ORIGINS = False
-    # construir lista de origins a partir de hosts
-    CORS_ALLOWED_ORIGINS = [f"http://{h}" for h in ALLOWED_HOSTS]
+_cors_origins_env = config('CORS_ALLOWED_ORIGINS', default='')
+CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_origins_env.split(',') if o.strip()]
+
+if not CORS_ALLOWED_ORIGINS:
+    CORS_ALLOWED_ORIGINS = [
+        'http://localhost:8081',
+        'http://127.0.0.1:8081',
+        'exp://localhost:8081',
+    ]
+
+CORS_ALLOW_ALL_ORIGINS = DEBUG  # temporário para desenvolvimento
 
 CORS_ALLOW_CREDENTIALS = True
 
 # ==================
 # CSRF Configuration
 # ==================
-CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:3000',
-    'http://localhost:8000',
-    'http://localhost:8081',
-    'http://localhost:19006',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:8000',
-    'http://127.0.0.1:8081',
-    'http://192.168.1.19:8000',
-    'http://192.168.1.19:8081',
-]
+_csrf_env = config('CSRF_TRUSTED_ORIGINS', default='')
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_env.split(',') if o.strip()]
+
+# Defaults para desenvolvimento local
+if DEBUG:
+    CSRF_TRUSTED_ORIGINS += [
+        'http://localhost:3000',
+        'http://localhost:8000',
+        'http://localhost:8081',
+        'http://localhost:19006',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:8000',
+        'http://127.0.0.1:8081',
+    ]
 
 CORS_ALLOW_HEADERS = [
     'accept',

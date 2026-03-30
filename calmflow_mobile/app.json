@@ -11,6 +11,11 @@
       "backgroundColor": "#3B5BDB",
       "hideProgressBar": true
     },
+    "androidStatusBar": {
+      "hidden": true,
+      "translucent": true,
+      "backgroundColor": "#00000000"
+    },
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTabletMode": true,
@@ -30,12 +35,10 @@
         "barStyle": "light-content"
       }
     },
-    "web": {
-      "bundleUrl": "http://192.168.1.19:19006"
-    },
+    "web": {},
     "plugins": [],
     "extra": {
-      "API_BASE_URL": "http://192.168.1.19:8000/api/v1",
+      "API_BASE_URL": "https://calmflow-production.up.railway.app/api/v1",
       "API_TIMEOUT": 10000,
       "eas": {
         "projectId": "f36df068-7b54-4dfd-b62e-1ce2b02e050f"
