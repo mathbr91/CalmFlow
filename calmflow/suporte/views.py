@@ -92,10 +92,8 @@ def sos_endpoint(request):
     🚨 Endpoint de SOS - Informações de Emergência e Suporte
     
     Retorna:
-    - Números de contato de emergência (CVV: 188)
-    - Localização de hospitais próximos (mock data)
-    - Dica rápida de respiração para acalmar
     - Disclaimer jurídico no idioma do cliente
+    - Dica rápida de respiração para acalmar
     
     Acessível para QUALQUER PESSOA (sem autenticação)
     
@@ -106,8 +104,6 @@ def sos_endpoint(request):
     GET /api/v1/sos/
     GET /api/v1/sos/?lang=en-us
     """
-    
-    dados_sos = obter_dados_sos()
     
     # Detectar idioma do cliente
     idioma = detectar_idioma_da_request(request)
@@ -137,11 +133,6 @@ def sos_endpoint(request):
         'idioma': idioma,
         'urgencia': textos['urgencia'],
         'disclaimer': obter_disclaimer_jurídico(idioma),
-        'numeros_emergencia': {
-            'cvv': dados_sos['cvv'],
-            'emergencia_medica': dados_sos['emergencias']
-        },
-        'hospitais_proximos': dados_sos['hospitais_proximos'],
         'tecnica_rapida': {
             'titulo': textos['tecnica_titulo'],
             'instrucoes': [
