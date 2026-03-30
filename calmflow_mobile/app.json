@@ -18,7 +18,6 @@
     },
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTabletMode": true,
       "bundleIdentifier": "com.calmflow.app",
       "infoPlist": {
         "UIStatusBarStyle": "UIStatusBarStyleLightContent"
@@ -29,11 +28,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.calmflow.app",
-      "statusBar": {
-        "backgroundColor": "#3B5BDB",
-        "barStyle": "light-content"
-      }
+      "package": "com.calmflow.app"
     },
     "web": {},
     "plugins": [],
