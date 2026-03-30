@@ -187,6 +187,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
   },
   header: {
+    marginTop: 40,
     marginBottom: spacing.lg,
   },
   greeting: {
@@ -276,8 +277,10 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     margin: spacing.lg,
     alignItems: 'center',
+    flexDirection: 'column',
     width: '90%',
     maxWidth: 400,
+    maxHeight: '85%',
   },
   modalTitle: {
     ...typography.h2,

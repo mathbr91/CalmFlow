@@ -21,7 +21,11 @@ import { colors, spacing, typography } from '../themes';
 import { LoadingOverlay, Disclaimer } from '../components';
 import { apiService } from '../services/ApiService';
 
-const QUESTIONS = [
+// ──────────────────────────────────────────────────────────
+// Pool de perguntas — 4 obrigatórias + 11 opcionais (total 15)
+// A cada sessão são sorteadas 8: as 4 obrigatórias + 4 opcionais
+// ──────────────────────────────────────────────────────────
+const REQUIRED_QUESTIONS = [
   {
     id: 'clima_interno',
     type: 'choice',
@@ -69,6 +73,9 @@ const QUESTIONS = [
     min: 0,
     max: 10,
   },
+];
+
+const OPTIONAL_POOL = [
   {
     id: 'sintomas',
     type: 'text',
@@ -83,9 +90,109 @@ const QUESTIONS = [
     question: 'Notas adicionais ou observações',
     placeholder: 'Qualquer outra coisa que queira compartilhar...',
   },
+  {
+    id: 'nivel_energia',
+    type: 'scale',
+    emoji: '⚡',
+    question: 'Como está seu nível de energia física agora?',
+    description: 'De 1 (sem energia) a 10 (cheio de energia)',
+    min: 1,
+    max: 10,
+  },
+  {
+    id: 'qualidade_sono',
+    type: 'scale',
+    emoji: '😴',
+    question: 'Como foi a qualidade do seu sono recentemente?',
+    description: 'De 1 (péssimo) a 5 (excelente)',
+    min: 1,
+    max: 5,
+  },
+  {
+    id: 'atividade_fisica',
+    type: 'choice',
+    emoji: '🏃',
+    question: 'Você praticou alguma atividade física hoje?',
+    options: [
+      { value: 'sim_intensa', label: 'Sim, intensa 🔥' },
+      { value: 'sim_leve', label: 'Sim, leve 🚶' },
+      { value: 'nao_planejado', label: 'Não, mas quero 🎯' },
+      { value: 'nao', label: 'Não pratiquei ❌' },
+    ],
+  },
+  {
+    id: 'suporte_social',
+    type: 'choice',
+    emoji: '🤝',
+    question: 'Você tem se sentido apoiado pelas pessoas ao redor?',
+    options: [
+      { value: 'muito', label: 'Muito apoiado 💙' },
+      { value: 'pouco', label: 'Um pouco 🤏' },
+      { value: 'nao', label: 'Não me sinto apoiado 😔' },
+      { value: 'isolado', label: 'Me sinto isolado 😶' },
+    ],
+  },
+  {
+    id: 'foco',
+    type: 'scale',
+    emoji: '🎯',
+    question: 'Qual é seu nível de foco e concentração hoje?',
+    description: 'De 1 (muito disperso) a 10 (totalmente focado)',
+    min: 1,
+    max: 10,
+  },
+  {
+    id: 'corpo_sinais',
+    type: 'choice',
+    emoji: '🫀',
+    question: 'Seu corpo está dando sinais de cuidado?',
+    options: [
+      { value: 'tenso', label: 'Tenso ou contraído 😣' },
+      { value: 'agitado', label: 'Agitado / inquieto 🫨' },
+      { value: 'dor', label: 'Dor ou desconforto 🤕' },
+      { value: 'ok', label: 'Estou bem fisicamente ✅' },
+    ],
+  },
+  {
+    id: 'momento_positivo',
+    type: 'text',
+    emoji: '🌟',
+    question: 'Existe algo positivo no seu dia até agora?',
+    placeholder: 'Pode ser algo pequeno, como um café gostoso ou uma conversa...',
+  },
+  {
+    id: 'expectativa',
+    type: 'choice',
+    emoji: '🔮',
+    question: 'Qual é sua expectativa para as próximas horas?',
+    options: [
+      { value: 'otimista', label: 'Otimista 😊' },
+      { value: 'neutro', label: 'Neutro 😐' },
+      { value: 'apreensivo', label: 'Apreensivo 😟' },
+      { value: 'sobrecarregado', label: 'Sobrecarregado 😩' },
+    ],
+  },
+  {
+    id: 'pensamento_dominante',
+    type: 'choice',
+    emoji: '💭',
+    question: 'Qual pensamento domina sua mente agora?',
+    options: [
+      { value: 'futuro', label: 'Preocupações com o futuro 🔮' },
+      { value: 'passado', label: 'Ruminações do passado ⏪' },
+      { value: 'presente', label: 'Foco no presente ✅' },
+      { value: 'indefinido', label: 'Não consigo definir 🌫️' },
+    ],
+  },
 ];
 
 export const CheckInScreen = ({ navigation }) => {
+  // Sorteia 4 perguntas opcionais a cada sessão e combina com as 4 obrigatórias
+  const [activeQuestions] = useState(() => {
+    const shuffled = [...OPTIONAL_POOL].sort(() => Math.random() - 0.5);
+    return [...REQUIRED_QUESTIONS, ...shuffled.slice(0, 4)];
+  });
+
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [responses, setResponses] = useState({});
   const [loading, setLoading] = useState(false);
@@ -168,7 +275,7 @@ export const CheckInScreen = ({ navigation }) => {
   };
 
   const handleNext = () => {
-    if (currentQuestion < QUESTIONS.length - 1) {
+    if (currentQuestion < activeQuestions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
       setTextInput('');
     } else {
@@ -179,7 +286,7 @@ export const CheckInScreen = ({ navigation }) => {
   const handlePrevious = () => {
     if (currentQuestion > 0) {
       setCurrentQuestion(currentQuestion - 1);
-      const prevQuestion = QUESTIONS[currentQuestion - 1];
+      const prevQuestion = activeQuestions[currentQuestion - 1];
       setTextInput(responses[prevQuestion.id] || '');
     }
   };
@@ -187,7 +294,7 @@ export const CheckInScreen = ({ navigation }) => {
   const handleChoice = async (value) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     
-    const questionId = QUESTIONS[currentQuestion].id;
+    const questionId = activeQuestions[currentQuestion].id;
     setResponses({
       ...responses,
       [questionId]: value,
@@ -199,7 +306,7 @@ export const CheckInScreen = ({ navigation }) => {
   const handleScale = async (value) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     
-    const questionId = QUESTIONS[currentQuestion].id;
+    const questionId = activeQuestions[currentQuestion].id;
     setResponses({
       ...responses,
       [questionId]: value,
@@ -209,7 +316,7 @@ export const CheckInScreen = ({ navigation }) => {
   };
 
   const handleTextSubmit = async () => {
-    const questionId = QUESTIONS[currentQuestion].id;
+    const questionId = activeQuestions[currentQuestion].id;
     setResponses({
       ...responses,
       [questionId]: textInput.trim(),
@@ -222,7 +329,27 @@ export const CheckInScreen = ({ navigation }) => {
     setLoading(true);
 
     try {
-      await apiService.createCheckIn(responses);
+      // Campos obrigatórios com fallback (caso a pergunta tenha sido pulada)
+      const BACKEND_FIELDS = ['clima_interno', 'nivel_ruido', 'gatilho', 'auto_eficacia', 'sintomas', 'notas'];
+      const payload = {
+        clima_interno: responses.clima_interno || 'nublado',
+        nivel_ruido: responses.nivel_ruido !== undefined ? responses.nivel_ruido : 5,
+        gatilho: responses.gatilho || 'desconhecido',
+        auto_eficacia: responses.auto_eficacia !== undefined ? responses.auto_eficacia : 5,
+        sintomas: responses.sintomas || '',
+      };
+
+      // Agrega respostas extras (opcionais/novas) ao campo notas
+      const notasExtra = [];
+      for (const [key, value] of Object.entries(responses)) {
+        if (!BACKEND_FIELDS.includes(key) && value) {
+          const q = activeQuestions.find(aq => aq.id === key);
+          if (q) notasExtra.push(`${q.question}: ${value}`);
+        }
+      }
+      payload.notas = [responses.notas || '', ...notasExtra].filter(Boolean).join('\n\n');
+
+      await apiService.createCheckIn(payload);
       await Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Success
       );
@@ -263,8 +390,8 @@ export const CheckInScreen = ({ navigation }) => {
     );
   }
 
-  const question = QUESTIONS[currentQuestion];
-  const progress = ((currentQuestion + 1) / QUESTIONS.length) * 100;
+  const question = activeQuestions[currentQuestion];
+  const progress = ((currentQuestion + 1) / activeQuestions.length) * 100;
 
   const renderQuestionContent = () => {
     switch (question.type) {
@@ -322,7 +449,7 @@ export const CheckInScreen = ({ navigation }) => {
                 onPress={handleTextSubmit}
               >
                 <Text style={styles.nextButtonText}>
-                  {currentQuestion === QUESTIONS.length - 1 ? 'Finalizar' : 'Próximo'}
+                  {currentQuestion === activeQuestions.length - 1 ? 'Finalizar' : 'Próximo'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -347,7 +474,7 @@ export const CheckInScreen = ({ navigation }) => {
           </TouchableOpacity>
           <Text style={styles.title}>Check-in de Bem-estar</Text>
           <Text style={styles.progress}>
-            {currentQuestion + 1} de {QUESTIONS.length}
+            {currentQuestion + 1} de {activeQuestions.length}
           </Text>
         </View>
 
@@ -384,7 +511,7 @@ export const CheckInScreen = ({ navigation }) => {
               onPress={handleNext}
             >
               <Text style={styles.navButtonText}>
-                {currentQuestion === QUESTIONS.length - 1 ? 'Finalizar' : 'Pular'}
+                {currentQuestion === activeQuestions.length - 1 ? 'Finalizar' : 'Pular'}
               </Text>
             </TouchableOpacity>
           </View>

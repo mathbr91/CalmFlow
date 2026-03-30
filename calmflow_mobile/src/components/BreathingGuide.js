@@ -103,10 +103,10 @@ export const BreathingGuide = ({ technique }) => {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexDirection: 'column',
+    alignSelf: 'stretch',
     backgroundColor: colors.background,
     paddingHorizontal: spacing.md,
-    justifyContent: 'center',
     alignItems: 'center',
   },
   title: {

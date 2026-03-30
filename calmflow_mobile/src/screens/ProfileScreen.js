@@ -33,11 +33,17 @@ export const ProfileScreen = ({ navigation }) => {
 
   const loadProfile = async () => {
     try {
-      const response = await apiService.get('/api/profile-extended/');
+      const response = await apiService.get('/profile-extended/');
       setUser(response);
       setContatoApoio(response.contato_apoio || '');
     } catch (error) {
-      console.error('[ProfileScreen] Erro ao carregar perfil:', error);
+      // Fallback para endpoint de perfil simples caso profile-extended falhe
+      try {
+        const fallback = await apiService.getProfile();
+        setUser(fallback);
+      } catch (e) {
+        console.error('[ProfileScreen] Erro ao carregar perfil:', e);
+      }
     } finally {
       setLoading(false);
     }
@@ -46,7 +52,7 @@ export const ProfileScreen = ({ navigation }) => {
   const handleSaveContact = async () => {
     setSaving(true);
     try {
-      const response = await apiService.put('/api/profile-extended/', {
+      const response = await apiService.put('/profile-extended/', {
         contato_apoio: contato_apoio,
       });
       setUser(response);
@@ -59,9 +65,22 @@ export const ProfileScreen = ({ navigation }) => {
     }
   };
 
-  const handleLogout = async () => {
-    await logout();
-    navigation.replace('Login');
+  const handleLogout = () => {
+    Alert.alert(
+      'Sair da conta',
+      'Tem certeza que deseja sair?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Sair',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            navigation.replace('Login');
+          },
+        },
+      ]
+    );
   };
 
   if (!user) {

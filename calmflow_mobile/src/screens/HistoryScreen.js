@@ -3,7 +3,7 @@
  * Mostra o histórico de clima interno dos últimos 7 dias
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ScrollView,
+  RefreshControl,
   Dimensions,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -23,6 +24,8 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 export const HistoryScreen = ({ navigation }) => {
   const [checkIns, setCheckIns] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const checkAuthAndLoad = async () => {
@@ -39,6 +42,7 @@ export const HistoryScreen = ({ navigation }) => {
 
   const loadHistory = async () => {
     try {
+      setError(null);
       const response = await apiService.getCheckIns();
       // Filtrar apenas os últimos 7 dias
       const sevenDaysAgo = new Date();
@@ -52,11 +56,17 @@ export const HistoryScreen = ({ navigation }) => {
       setCheckIns(recentCheckIns);
     } catch (error) {
       console.error('[HistoryScreen] Erro ao carregar histórico:', error);
-      alert('Erro ao carregar histórico');
+      setError('Não foi possível carregar o histórico. Verifique sua conexão.');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadHistory();
+  }, []);
 
   const getClimaColor = (clima) => {
     const colors = {
@@ -120,6 +130,14 @@ export const HistoryScreen = ({ navigation }) => {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
       >
         {/* Header */}
         <View style={styles.header}>
@@ -129,6 +147,16 @@ export const HistoryScreen = ({ navigation }) => {
           <Text style={styles.title}>Histórico de Humor</Text>
           <Text style={styles.subtitle}>Últimos 7 dias</Text>
         </View>
+
+        {/* Error state */}
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>⚠️ {error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={loadHistory}>
+              <Text style={styles.retryButtonText}>Tentar novamente</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Timeline */}
         <View style={styles.timeline}>
@@ -301,6 +329,30 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textSecondary,
     fontSize: 18,
+  },
+  errorContainer: {
+    backgroundColor: `${colors.error}15`,
+    borderRadius: 12,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    alignItems: 'center',
+  },
+  errorText: {
+    ...typography.body,
+    color: colors.error,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  retryButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+  },
+  retryButtonText: {
+    ...typography.body,
+    color: colors.surface,
+    fontWeight: '600',
   },
   statsContainer: {
     backgroundColor: colors.surface,
