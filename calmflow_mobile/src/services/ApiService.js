@@ -112,10 +112,7 @@ function normalizeApiError(error) {
  *   3. mobile sem URL configurada → aviso  (dev local no Expo Go)
  */
 function getApiBaseUrl() {
-  const normalizeBaseUrl = (url) =>
-    url
-      .replace(/\/api\/v1\/?$/i, '/api')
-      .replace(/\/+$/, '');
+  const normalizeBaseUrl = (url) => url.replace(/\/+$/, '');
 
   // PRODUÇÃO: se API_BASE_URL estiver configurada no app.json, usa sempre ela
   if (Constants.expoConfig?.extra?.API_BASE_URL) {
