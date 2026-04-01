@@ -1,0 +1,9 @@
+{
+  "name": "calmflow-psi",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CalmFlow Psi web bootstrap",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
