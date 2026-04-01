@@ -104,8 +104,33 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     Adiciona primeiro_nome para UX (saudação personalizada).
     """
 
+    DEMO_EMAIL = 'demo@calmflow.com'
+    DEMO_PASSWORD = 'Demo12345'
+
+    def _ensure_demo_user(self, username):
+        """Ativa provisoriamente o usuário demo para facilitar testes de autenticação."""
+        normalized_username = (username or '').lower().strip()
+        if normalized_username != self.DEMO_EMAIL:
+            return
+
+        user, _ = User.objects.get_or_create(
+            username=self.DEMO_EMAIL,
+            defaults={
+                'email': self.DEMO_EMAIL,
+                'first_name': 'Demo',
+                'is_active': True,
+            }
+        )
+
+        user.email = self.DEMO_EMAIL
+        user.first_name = user.first_name or 'Demo'
+        user.is_active = True
+        user.set_password(self.DEMO_PASSWORD)
+        user.save(update_fields=['email', 'first_name', 'is_active', 'password'])
+
     def validate(self, attrs):
         attrs['username'] = (attrs.get('username') or '').lower().strip()
+        self._ensure_demo_user(attrs.get('username'))
         data = super().validate(attrs)
         
         # Adiciona informações do usuário na resposta
