@@ -4,11 +4,16 @@ Utiliza djangorestframework-simplejwt para tokens JWT.
 """
 
 from django.contrib.auth.models import User
+from django.contrib.auth.models import Group
 from django.contrib.auth.password_validation import validate_password
 from django.db import IntegrityError
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import UserProfile
+from .models import UserProfile, PsicologoProfile
+
+
+def is_psicologo(user):
+    return user.groups.filter(name='Psicologos').exists()
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -157,5 +162,97 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'contato_apoio',
             'nome_contato_apoio',
             'vinculo_contato_apoio',
+            'nome_psicologo',
+            'telefone_psicologo',
+            'registro_ordem_psicologo',
         ]
+
+
+class PsicologoRegisterSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+    first_name = serializers.CharField(required=True, allow_blank=False, max_length=150)
+    password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
+    password_confirm = serializers.CharField(write_only=True, required=True)
+    registro_profissional = serializers.CharField(required=True, allow_blank=False, max_length=40)
+    especialidade = serializers.CharField(required=False, allow_blank=True, max_length=120)
+    telefone = serializers.CharField(required=False, allow_blank=True, max_length=20)
+
+    def validate(self, attrs):
+        if attrs.get('password') != attrs.get('password_confirm'):
+            raise serializers.ValidationError({'password_confirm': 'As senhas não conferem.'})
+
+        attrs['email'] = attrs['email'].lower().strip()
+        attrs['registro_profissional'] = attrs['registro_profissional'].strip()
+
+        if User.objects.filter(username=attrs['email']).exists():
+            raise serializers.ValidationError({'email': 'Este e-mail já está em uso.'})
+
+        if PsicologoProfile.objects.filter(registro_profissional__iexact=attrs['registro_profissional']).exists():
+            raise serializers.ValidationError({'registro_profissional': 'Este registro profissional já está em uso.'})
+
+        return attrs
+
+    def create(self, validated_data):
+        validated_data.pop('password_confirm', None)
+        password = validated_data.pop('password')
+
+        email = validated_data['email']
+        user = User.objects.create_user(
+            username=email,
+            email=email,
+            first_name=validated_data['first_name'],
+            password=password,
+        )
+
+        psicologos_group, _ = Group.objects.get_or_create(name='Psicologos')
+        user.groups.add(psicologos_group)
+
+        psicologo = PsicologoProfile.objects.create(
+            user=user,
+            registro_profissional=validated_data['registro_profissional'],
+            especialidade=validated_data.get('especialidade', ''),
+            telefone=validated_data.get('telefone', ''),
+        )
+
+        psicologo.sincronizar_vinculos_por_registro()
+        return psicologo
+
+
+class PsicologoTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        attrs['username'] = (attrs.get('username') or '').lower().strip()
+        data = super().validate(attrs)
+
+        if not is_psicologo(self.user):
+            raise serializers.ValidationError({'detail': 'Acesso restrito para psicólogos.'})
+
+        psicologo_profile = PsicologoProfile.objects.filter(user=self.user, ativo=True).first()
+        if not psicologo_profile:
+            raise serializers.ValidationError({'detail': 'Perfil de psicólogo não encontrado ou inativo.'})
+
+        psicologo_profile.sincronizar_vinculos_por_registro()
+
+        data['user'] = {
+            'id': self.user.id,
+            'username': self.user.username,
+            'email': self.user.email,
+            'primeiro_nome': self.user.first_name or self.user.username,
+            'is_psicologo': True,
+        }
+        data['psicologo'] = {
+            'registro_profissional': psicologo_profile.registro_profissional,
+            'especialidade': psicologo_profile.especialidade,
+            'telefone': psicologo_profile.telefone,
+        }
+        return data
+
+
+class PsicologoMeSerializer(serializers.ModelSerializer):
+    registro_profissional = serializers.CharField(source='psicologo_profile.registro_profissional')
+    especialidade = serializers.CharField(source='psicologo_profile.especialidade')
+    telefone = serializers.CharField(source='psicologo_profile.telefone')
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'first_name', 'registro_profissional', 'especialidade', 'telefone']
 

@@ -202,6 +202,25 @@ class UserProfile(models.Model):
         blank=True,
         help_text='Vínculo com a pessoa de apoio (ex: Mãe, Amigo, Cônjuge)'
     )
+
+    nome_psicologo = models.CharField(
+        max_length=120,
+        blank=True,
+        help_text='Nome do psicólogo informado pelo paciente'
+    )
+
+    telefone_psicologo = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text='Telefone do psicólogo informado pelo paciente'
+    )
+
+    registro_ordem_psicologo = models.CharField(
+        max_length=40,
+        blank=True,
+        db_index=True,
+        help_text='Registro profissional do psicólogo (ordem) informado pelo paciente'
+    )
     
     atualizado_em = models.DateTimeField(auto_now=True)
     
@@ -211,4 +230,109 @@ class UserProfile(models.Model):
     
     def __str__(self):
         return f'Perfil - {self.usuario.username}'
+
+
+class PsicologoProfile(models.Model):
+    """Perfil do psicólogo com registro profissional único."""
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='psicologo_profile'
+    )
+    registro_profissional = models.CharField(max_length=40, unique=True, db_index=True)
+    especialidade = models.CharField(max_length=120, blank=True)
+    telefone = models.CharField(max_length=20, blank=True)
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Perfil de Psicólogo'
+        verbose_name_plural = 'Perfis de Psicólogo'
+
+    def __str__(self):
+        return f'Psicólogo - {self.user.username} ({self.registro_profissional})'
+
+    def sincronizar_vinculos_por_registro(self):
+        """Vincula automaticamente pacientes com mesmo registro da ordem."""
+        registro = (self.registro_profissional or '').strip()
+        if not registro:
+            return 0
+
+        pacientes = UserProfile.objects.filter(registro_ordem_psicologo__iexact=registro).select_related('usuario')
+        total = 0
+        for perfil_paciente in pacientes:
+            if perfil_paciente.usuario_id == self.user_id:
+                continue
+            VinculoTerapeutico.objects.update_or_create(
+                paciente=perfil_paciente.usuario,
+                defaults={
+                    'psicologo': self,
+                    'status': 'ativo',
+                }
+            )
+            total += 1
+        return total
+
+
+class VinculoTerapeutico(models.Model):
+    """Vínculo 1:1 entre paciente e psicólogo."""
+
+    STATUS_CHOICES = [
+        ('ativo', 'Ativo'),
+        ('inativo', 'Inativo'),
+    ]
+
+    psicologo = models.ForeignKey(
+        PsicologoProfile,
+        on_delete=models.CASCADE,
+        related_name='vinculos'
+    )
+    paciente = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='vinculo_terapeutico'
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ativo')
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Vínculo Terapêutico'
+        verbose_name_plural = 'Vínculos Terapêuticos'
+        indexes = [
+            models.Index(fields=['psicologo', 'status']),
+        ]
+
+    def __str__(self):
+        return f'{self.paciente.username} -> {self.psicologo.user.username} ({self.status})'
+
+
+class NotaClinica(models.Model):
+    """Notas privadas do psicólogo para acompanhamento clínico."""
+
+    psicologo = models.ForeignKey(
+        PsicologoProfile,
+        on_delete=models.CASCADE,
+        related_name='notas_clinicas'
+    )
+    paciente = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='notas_clinicas'
+    )
+    conteudo = models.TextField()
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-criado_em']
+        verbose_name = 'Nota Clínica'
+        verbose_name_plural = 'Notas Clínicas'
+        indexes = [
+            models.Index(fields=['psicologo', 'paciente', '-criado_em']),
+        ]
+
+    def __str__(self):
+        return f'Nota de {self.psicologo.user.username} para {self.paciente.username}'
 

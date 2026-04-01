@@ -13,7 +13,15 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .serializers_auth import RegisterSerializer, CustomTokenObtainPairSerializer, UserProfileSerializer
+from .serializers_auth import (
+    RegisterSerializer,
+    CustomTokenObtainPairSerializer,
+    UserProfileSerializer,
+    PsicologoRegisterSerializer,
+    PsicologoTokenObtainPairSerializer,
+    PsicologoMeSerializer,
+    is_psicologo,
+)
 from .models import UserProfile, CheckIn, Emergencia
 
 logger = logging.getLogger(__name__)
@@ -64,6 +72,9 @@ def montar_payload_perfil(user, profile):
         'contato_apoio': profile.contato_apoio or '',
         'nome_contato_apoio': profile.nome_contato_apoio or '',
         'vinculo_contato_apoio': profile.vinculo_contato_apoio or '',
+        'nome_psicologo': profile.nome_psicologo or '',
+        'telefone_psicologo': profile.telefone_psicologo or '',
+        'registro_ordem_psicologo': profile.registro_ordem_psicologo or '',
         'sessoes_respiracao': sessoes_respiracao,
         'total_checkins': total_checkins,
         'streak_dias': calcular_streak_dias(user),
@@ -167,6 +178,52 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     
     serializer_class = CustomTokenObtainPairSerializer
     permission_classes = [AllowAny]
+
+
+class PsicologoRegisterView(APIView):
+    """Cadastro de psicólogo (auto-cadastro) com criação do perfil profissional."""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        serializer = PsicologoRegisterSerializer(data=request.data)
+        if serializer.is_valid():
+            psicologo = serializer.save()
+            return Response(
+                {
+                    'id': psicologo.user.id,
+                    'email': psicologo.user.email,
+                    'first_name': psicologo.user.first_name,
+                    'registro_profissional': psicologo.registro_profissional,
+                    'message': 'Psicólogo cadastrado com sucesso! Faça login para continuar.',
+                },
+                status=status.HTTP_201_CREATED,
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PsicologoTokenObtainPairView(TokenObtainPairView):
+    """Login exclusivo para psicólogos."""
+
+    serializer_class = PsicologoTokenObtainPairSerializer
+    permission_classes = [AllowAny]
+
+
+class PsicologoMeView(APIView):
+    """Retorna dados do psicólogo autenticado no contexto psi."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        if not is_psicologo(request.user):
+            return Response({'detail': 'Acesso restrito para psicólogos.'}, status=status.HTTP_403_FORBIDDEN)
+
+        if not hasattr(request.user, 'psicologo_profile') or not request.user.psicologo_profile.ativo:
+            return Response({'detail': 'Perfil de psicólogo não encontrado ou inativo.'}, status=status.HTTP_403_FORBIDDEN)
+
+        request.user.psicologo_profile.sincronizar_vinculos_por_registro()
+        serializer = PsicologoMeSerializer(request.user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])

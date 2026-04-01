@@ -3,7 +3,7 @@ Configuração do admin para os modelos do CalmFlow.
 """
 
 from django.contrib import admin
-from .models import CheckIn, Emergencia, UserProfile
+from .models import CheckIn, Emergencia, UserProfile, PsicologoProfile, VinculoTerapeutico, NotaClinica
 
 
 @admin.register(CheckIn)
@@ -65,8 +65,8 @@ class EmergenciaAdmin(admin.ModelAdmin):
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ('usuario', 'contato_apoio', 'atualizado_em')
-    search_fields = ('usuario__username', 'contato_apoio')
+    list_display = ('usuario', 'contato_apoio', 'registro_ordem_psicologo', 'atualizado_em')
+    search_fields = ('usuario__username', 'contato_apoio', 'registro_ordem_psicologo')
     readonly_fields = ('atualizado_em',)
     
     fieldsets = (
@@ -74,10 +74,36 @@ class UserProfileAdmin(admin.ModelAdmin):
             'fields': ('usuario',)
         }),
         ('Informações de Apoio', {
-            'fields': ('contato_apoio',)
+            'fields': ('contato_apoio', 'nome_contato_apoio', 'vinculo_contato_apoio')
+        }),
+        ('Informações do Psicólogo', {
+            'fields': ('nome_psicologo', 'telefone_psicologo', 'registro_ordem_psicologo')
         }),
         ('Metadata', {
             'fields': ('atualizado_em',),
             'classes': ('collapse',)
         }),
     )
+
+
+@admin.register(PsicologoProfile)
+class PsicologoProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'registro_profissional', 'especialidade', 'ativo', 'atualizado_em')
+    list_filter = ('ativo', 'especialidade')
+    search_fields = ('user__username', 'user__email', 'registro_profissional')
+    readonly_fields = ('criado_em', 'atualizado_em')
+
+
+@admin.register(VinculoTerapeutico)
+class VinculoTerapeuticoAdmin(admin.ModelAdmin):
+    list_display = ('paciente', 'psicologo', 'status', 'atualizado_em')
+    list_filter = ('status',)
+    search_fields = ('paciente__username', 'psicologo__user__username', 'psicologo__registro_profissional')
+    readonly_fields = ('criado_em', 'atualizado_em')
+
+
+@admin.register(NotaClinica)
+class NotaClinicaAdmin(admin.ModelAdmin):
+    list_display = ('psicologo', 'paciente', 'criado_em')
+    search_fields = ('psicologo__user__username', 'paciente__username', 'conteudo')
+    readonly_fields = ('criado_em',)
