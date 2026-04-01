@@ -72,5 +72,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`calmflow_psi running on port ${PORT}`);
+  console.log(`CalmFlow PSI a correr na porta ${PORT}`);
 });
