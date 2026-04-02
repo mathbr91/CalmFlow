@@ -147,6 +147,45 @@ const html = `<!doctype html>
         background: #fff;
       }
 
+      .password-field {
+        position: relative;
+      }
+
+      .password-field input {
+        width: 100%;
+        padding-right: 52px;
+      }
+
+      .password-toggle {
+        position: absolute;
+        top: 50%;
+        right: 12px;
+        transform: translateY(-50%);
+        width: 32px;
+        height: 32px;
+        border: 0;
+        border-radius: 999px;
+        background: transparent;
+        color: #4b6285;
+        display: grid;
+        place-items: center;
+        padding: 0;
+      }
+
+      .password-toggle:hover {
+        background: rgba(31, 122, 224, 0.08);
+      }
+
+      .password-toggle:focus-visible {
+        outline: 2px solid rgba(31, 122, 224, 0.35);
+        outline-offset: 2px;
+      }
+
+      .password-toggle svg {
+        width: 18px;
+        height: 18px;
+      }
+
       input:focus {
         outline: none;
         border-color: #5ea6f4;
@@ -252,7 +291,15 @@ const html = `<!doctype html>
 
           <label>
             Senha
-            <input id="password" type="password" placeholder="********" autocomplete="current-password" required />
+            <div class="password-field">
+              <input id="password" type="password" placeholder="********" autocomplete="current-password" required />
+              <button id="password-toggle" class="password-toggle" type="button" aria-label="Mostrar senha" aria-pressed="false">
+                <svg id="password-toggle-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
+                </svg>
+              </button>
+            </div>
           </label>
 
           <button id="submit-btn" type="submit">Entrar no portal</button>
@@ -276,8 +323,32 @@ const html = `<!doctype html>
       const meCard = document.getElementById('me-card');
       const meContent = document.getElementById('me-content');
       const apiHint = document.getElementById('api-hint');
+      const passwordInput = document.getElementById('password');
+      const passwordToggle = document.getElementById('password-toggle');
+      const passwordToggleIcon = document.getElementById('password-toggle-icon');
 
       apiHint.textContent = 'API via proxy interno: /api (upstream: ' + API_BASE + ')';
+
+      function renderPasswordIcon(isVisible) {
+        if (isVisible) {
+          passwordToggleIcon.innerHTML = '<path d="M3 3l18 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M10.6 10.7A3 3 0 0 0 13.3 13.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.9 5.1A11.4 11.4 0 0 1 12 5c6.5 0 10 7 10 7a17.2 17.2 0 0 1-3.4 4.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.2 6.3C3.8 7.9 2 12 2 12s3.5 7 10 7a9.9 9.9 0 0 0 3.1-.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>';
+          passwordToggle.setAttribute('aria-label', 'Ocultar senha');
+          passwordToggle.setAttribute('aria-pressed', 'true');
+          return;
+        }
+
+        passwordToggleIcon.innerHTML = '<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>';
+        passwordToggle.setAttribute('aria-label', 'Mostrar senha');
+        passwordToggle.setAttribute('aria-pressed', 'false');
+      }
+
+      passwordToggle.addEventListener('click', () => {
+        const isVisible = passwordInput.type === 'text';
+        passwordInput.type = isVisible ? 'password' : 'text';
+        renderPasswordIcon(!isVisible);
+      });
+
+      renderPasswordIcon(false);
 
       async function fetchPsiMe(accessToken) {
         const response = await fetch('/api/psi/me/', {
