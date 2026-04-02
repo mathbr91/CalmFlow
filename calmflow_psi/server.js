@@ -1,4 +1,5 @@
 const http = require('http');
+const https = require('https');
 
 const PORT = process.env.PORT || 3000;
 const HOST = '0.0.0.0';
@@ -276,10 +277,10 @@ const html = `<!doctype html>
       const meContent = document.getElementById('me-content');
       const apiHint = document.getElementById('api-hint');
 
-      apiHint.textContent = 'API conectada: ' + API_BASE;
+      apiHint.textContent = 'API via proxy interno: /api (upstream: ' + API_BASE + ')';
 
       async function fetchPsiMe(accessToken) {
-        const response = await fetch(API_BASE + '/psi/me/', {
+        const response = await fetch('/api/psi/me/', {
           method: 'GET',
           headers: {
             Authorization: 'Bearer ' + accessToken,
@@ -312,7 +313,7 @@ const html = `<!doctype html>
         meContent.textContent = '';
 
         try {
-          const loginResponse = await fetch(API_BASE + '/psi/login/', {
+          const loginResponse = await fetch('/api/psi/login/', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -348,10 +349,79 @@ const html = `<!doctype html>
   </body>
 </html>`;
 
+function sanitizeProxyHeaders(headers) {
+  const blocked = new Set([
+    'host',
+    'connection',
+    'content-length',
+    'transfer-encoding',
+    'accept-encoding',
+  ]);
+
+  const clean = {};
+  Object.entries(headers || {}).forEach(([key, value]) => {
+    const name = String(key || '').toLowerCase();
+    if (!blocked.has(name)) {
+      clean[key] = value;
+    }
+  });
+  return clean;
+}
+
+function proxyApiRequest(req, res) {
+  const upstreamPath = req.url.replace(/^\/api/, '') || '/';
+  const targetUrl = new URL(API_BASE + upstreamPath);
+  const transport = targetUrl.protocol === 'https:' ? https : http;
+
+  const chunks = [];
+  req.on('data', (chunk) => chunks.push(chunk));
+  req.on('error', () => {
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ detail: 'Falha ao ler requisição.' }));
+  });
+
+  req.on('end', () => {
+    const bodyBuffer = Buffer.concat(chunks);
+    const proxyReq = transport.request(
+      {
+        protocol: targetUrl.protocol,
+        hostname: targetUrl.hostname,
+        port: targetUrl.port || (targetUrl.protocol === 'https:' ? 443 : 80),
+        path: targetUrl.pathname + targetUrl.search,
+        method: req.method,
+        headers: {
+          ...sanitizeProxyHeaders(req.headers),
+          'Content-Length': bodyBuffer.length,
+        },
+      },
+      (proxyRes) => {
+        const responseHeaders = sanitizeProxyHeaders(proxyRes.headers);
+        res.writeHead(proxyRes.statusCode || 502, responseHeaders);
+        proxyRes.pipe(res);
+      }
+    );
+
+    proxyReq.on('error', () => {
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ detail: 'Falha ao conectar com a API CalmFlow.' }));
+    });
+
+    if (bodyBuffer.length > 0) {
+      proxyReq.write(bodyBuffer);
+    }
+    proxyReq.end();
+  });
+}
+
 const server = http.createServer((req, res) => {
   if (req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'ok', service: 'calmflow_psi' }));
+    return;
+  }
+
+  if (req.url.startsWith('/api/')) {
+    proxyApiRequest(req, res);
     return;
   }
 
