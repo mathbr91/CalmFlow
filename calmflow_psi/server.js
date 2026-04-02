@@ -225,13 +225,84 @@ const html = `<!doctype html>
         color: var(--err);
       }
 
+      .view[hidden] {
+        display: none !important;
+      }
+
+      .dashboard {
+        display: grid;
+        gap: 18px;
+      }
+
+      .dashboard-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .dashboard-title {
+        margin: 0;
+        font-size: 1.5rem;
+      }
+
+      .dashboard-subtitle {
+        margin: 8px 0 0;
+        color: var(--ink-2);
+        line-height: 1.5;
+      }
+
+      .ghost-button {
+        min-width: 120px;
+        background: #eef5ff;
+        color: #0c4d9a;
+        border: 1px solid rgba(31, 122, 224, 0.16);
+      }
+
+      .profile-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .profile-card {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #fff;
+        padding: 14px;
+      }
+
+      .profile-label {
+        margin: 0 0 8px;
+        font-size: 12px;
+        font-weight: 800;
+        color: #5a7192;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .profile-value {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 700;
+        color: #14345d;
+        word-break: break-word;
+      }
+
+      .session-note {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 14px;
+        background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+        color: #254568;
+        line-height: 1.5;
+      }
+
       .me {
-        margin-top: 18px;
         border: 1px solid var(--line);
         border-radius: 12px;
         background: #fff;
         padding: 12px;
-        display: none;
       }
 
       .me pre {
@@ -262,6 +333,14 @@ const html = `<!doctype html>
           border-right: 0;
           border-bottom: 1px solid var(--line);
         }
+
+        .dashboard-header {
+          flex-direction: column;
+        }
+
+        .profile-grid {
+          grid-template-columns: 1fr;
+        }
       }
     </style>
   </head>
@@ -280,35 +359,68 @@ const html = `<!doctype html>
       </section>
 
       <section class="right">
-        <h2 class="form-title">Entrar como Psicólogo</h2>
-        <p class="form-subtitle">Use seu email profissional e senha cadastrada.</p>
+        <section id="login-view" class="view">
+          <h2 class="form-title">Entrar como Psicólogo</h2>
+          <p class="form-subtitle">Use seu email profissional e senha cadastrada.</p>
 
-        <form id="psi-login-form">
-          <label>
-            E-mail
-            <input id="email" type="email" placeholder="psicologo@dominio.com" autocomplete="email" required />
-          </label>
+          <form id="psi-login-form">
+            <label>
+              E-mail
+              <input id="email" type="email" placeholder="psicologo@dominio.com" autocomplete="email" required />
+            </label>
 
-          <label>
-            Senha
-            <div class="password-field">
-              <input id="password" type="password" placeholder="********" autocomplete="current-password" required />
-              <button id="password-toggle" class="password-toggle" type="button" aria-label="Mostrar senha" aria-pressed="false">
-                <svg id="password-toggle-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
-                </svg>
-              </button>
+            <label>
+              Senha
+              <div class="password-field">
+                <input id="password" type="password" placeholder="********" autocomplete="current-password" required />
+                <button id="password-toggle" class="password-toggle" type="button" aria-label="Mostrar senha" aria-pressed="false">
+                  <svg id="password-toggle-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
+                  </svg>
+                </button>
+              </div>
+            </label>
+
+            <button id="submit-btn" type="submit">Entrar no portal</button>
+          </form>
+
+          <div id="result" class="result"></div>
+        </section>
+
+        <section id="dashboard-view" class="view dashboard" hidden>
+          <div class="dashboard-header">
+            <div>
+              <h2 id="dashboard-title" class="dashboard-title">Portal do Psicólogo</h2>
+              <p id="dashboard-subtitle" class="dashboard-subtitle">Sessão ativa.</p>
             </div>
-          </label>
+            <button id="logout-btn" class="ghost-button" type="button">Sair</button>
+          </div>
 
-          <button id="submit-btn" type="submit">Entrar no portal</button>
-        </form>
+          <div class="profile-grid">
+            <article class="profile-card">
+              <p class="profile-label">E-mail</p>
+              <p id="profile-email" class="profile-value">-</p>
+            </article>
+            <article class="profile-card">
+              <p class="profile-label">Registro Profissional</p>
+              <p id="profile-registro" class="profile-value">-</p>
+            </article>
+            <article class="profile-card">
+              <p class="profile-label">Especialidade</p>
+              <p id="profile-especialidade" class="profile-value">-</p>
+            </article>
+            <article class="profile-card">
+              <p class="profile-label">Telefone</p>
+              <p id="profile-telefone" class="profile-value">-</p>
+            </article>
+          </div>
 
-        <div id="result" class="result"></div>
+          <div class="session-note">Sessão persistida neste navegador. Ao reabrir a página, o portal tenta restaurar o acesso automaticamente e renovar o token quando necessário.</div>
 
-        <section id="me-card" class="me">
-          <pre id="me-content"></pre>
+          <section class="me">
+            <pre id="me-content"></pre>
+          </section>
         </section>
 
         <p id="api-hint" class="api"></p>
@@ -320,14 +432,151 @@ const html = `<!doctype html>
       const form = document.getElementById('psi-login-form');
       const submitBtn = document.getElementById('submit-btn');
       const result = document.getElementById('result');
-      const meCard = document.getElementById('me-card');
+      const loginView = document.getElementById('login-view');
+      const dashboardView = document.getElementById('dashboard-view');
       const meContent = document.getElementById('me-content');
       const apiHint = document.getElementById('api-hint');
       const passwordInput = document.getElementById('password');
       const passwordToggle = document.getElementById('password-toggle');
       const passwordToggleIcon = document.getElementById('password-toggle-icon');
+      const logoutBtn = document.getElementById('logout-btn');
+      const dashboardTitle = document.getElementById('dashboard-title');
+      const dashboardSubtitle = document.getElementById('dashboard-subtitle');
+      const profileEmail = document.getElementById('profile-email');
+      const profileRegistro = document.getElementById('profile-registro');
+      const profileEspecialidade = document.getElementById('profile-especialidade');
+      const profileTelefone = document.getElementById('profile-telefone');
+      const SESSION_KEYS = {
+        access: 'psi_access_token',
+        refresh: 'psi_refresh_token',
+        email: 'psi_last_email',
+      };
 
       apiHint.textContent = 'API via proxy interno: /api (upstream: ' + API_BASE + ')';
+
+      function setView(viewName) {
+        const isDashboard = viewName === 'dashboard';
+        loginView.hidden = isDashboard;
+        dashboardView.hidden = !isDashboard;
+        history.replaceState(null, '', isDashboard ? '#dashboard' : '#login');
+      }
+
+      function setResult(type, message) {
+        result.className = type ? 'result ' + type : 'result';
+        result.textContent = message || '';
+      }
+
+      function storeSession(accessToken, refreshToken, email) {
+        if (accessToken) {
+          localStorage.setItem(SESSION_KEYS.access, accessToken);
+        }
+        if (refreshToken) {
+          localStorage.setItem(SESSION_KEYS.refresh, refreshToken);
+        }
+        if (email) {
+          localStorage.setItem(SESSION_KEYS.email, email);
+        }
+      }
+
+      function clearSession() {
+        localStorage.removeItem(SESSION_KEYS.access);
+        localStorage.removeItem(SESSION_KEYS.refresh);
+      }
+
+      function getAccessToken() {
+        return localStorage.getItem(SESSION_KEYS.access) || '';
+      }
+
+      function getRefreshToken() {
+        return localStorage.getItem(SESSION_KEYS.refresh) || '';
+      }
+
+      function fillDashboard(data) {
+        const displayName = data.first_name || data.email || 'Psicólogo';
+        dashboardTitle.textContent = 'Olá, ' + displayName;
+        dashboardSubtitle.textContent = 'Seu acesso foi restaurado com sucesso neste navegador.';
+        profileEmail.textContent = data.email || '-';
+        profileRegistro.textContent = data.registro_profissional || '-';
+        profileEspecialidade.textContent = data.especialidade || 'Não informado';
+        profileTelefone.textContent = data.telefone || 'Não informado';
+        meContent.textContent = JSON.stringify(data, null, 2);
+      }
+
+      async function refreshAccessToken() {
+        const refreshToken = getRefreshToken();
+        if (!refreshToken) {
+          throw new Error('Sua sessão expirou. Faça login novamente.');
+        }
+
+        const response = await fetch('/api/token/refresh/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            refresh: refreshToken,
+          }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.access) {
+          clearSession();
+          throw new Error(data.detail || 'Sua sessão expirou. Faça login novamente.');
+        }
+
+        storeSession(data.access, data.refresh || refreshToken, localStorage.getItem(SESSION_KEYS.email) || '');
+        return data.access;
+      }
+
+      async function fetchPsiMe(accessToken, allowRefresh = true) {
+        const response = await fetch('/api/psi/me/', {
+          method: 'GET',
+          headers: {
+            Authorization: 'Bearer ' + accessToken,
+          },
+        });
+
+        if (response.status === 401 && allowRefresh) {
+          const nextAccessToken = await refreshAccessToken();
+          return fetchPsiMe(nextAccessToken, false);
+        }
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.detail || 'Falha ao carregar dados do psicólogo.');
+        }
+        return data;
+      }
+
+      async function restoreSession() {
+        const cachedEmail = localStorage.getItem(SESSION_KEYS.email) || '';
+        if (cachedEmail) {
+          document.getElementById('email').value = cachedEmail;
+        }
+
+        const accessToken = getAccessToken();
+        const refreshToken = getRefreshToken();
+        if (!accessToken && !refreshToken) {
+          setView('login');
+          return;
+        }
+
+        submitBtn.disabled = true;
+        setResult('', 'Restaurando sessão...');
+
+        try {
+          const meData = await fetchPsiMe(accessToken || (await refreshAccessToken()));
+          fillDashboard(meData);
+          setView('dashboard');
+          setResult('', '');
+        } catch (error) {
+          clearSession();
+          setView('login');
+          setResult('err', error.message || 'Não foi possível restaurar sua sessão.');
+        } finally {
+          submitBtn.disabled = false;
+        }
+      }
 
       function renderPasswordIcon(isVisible) {
         if (isVisible) {
@@ -348,22 +597,16 @@ const html = `<!doctype html>
         renderPasswordIcon(!isVisible);
       });
 
+      logoutBtn.addEventListener('click', () => {
+        clearSession();
+        dashboardSubtitle.textContent = 'Sessão encerrada.';
+        passwordInput.value = '';
+        meContent.textContent = '';
+        setView('login');
+        setResult('', '');
+      });
+
       renderPasswordIcon(false);
-
-      async function fetchPsiMe(accessToken) {
-        const response = await fetch('/api/psi/me/', {
-          method: 'GET',
-          headers: {
-            Authorization: 'Bearer ' + accessToken,
-          },
-        });
-
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(data.detail || 'Falha ao carregar dados do psicólogo.');
-        }
-        return data;
-      }
 
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -378,10 +621,7 @@ const html = `<!doctype html>
         }
 
         submitBtn.disabled = true;
-        result.className = 'result';
-        result.textContent = 'Autenticando...';
-        meCard.style.display = 'none';
-        meContent.textContent = '';
+        setResult('', 'Autenticando...');
 
         try {
           const loginResponse = await fetch('/api/psi/login/', {
@@ -400,22 +640,22 @@ const html = `<!doctype html>
             throw new Error(loginData.detail || 'Credenciais inválidas para o portal psi.');
           }
 
-          localStorage.setItem('psi_access_token', loginData.access || '');
-          localStorage.setItem('psi_refresh_token', loginData.refresh || '');
+          storeSession(loginData.access || '', loginData.refresh || '', email);
 
           const meData = await fetchPsiMe(loginData.access);
-          meCard.style.display = 'block';
-          meContent.textContent = JSON.stringify(meData, null, 2);
-
-          result.className = 'result ok';
-          result.textContent = 'Login realizado com sucesso.';
+          fillDashboard(meData);
+          setView('dashboard');
+          setResult('ok', 'Login realizado com sucesso.');
         } catch (error) {
-          result.className = 'result err';
-          result.textContent = error.message || 'Falha ao autenticar no portal psi.';
+          clearSession();
+          setView('login');
+          setResult('err', error.message || 'Falha ao autenticar no portal psi.');
         } finally {
           submitBtn.disabled = false;
         }
       });
+
+      restoreSession();
     </script>
   </body>
 </html>`;
