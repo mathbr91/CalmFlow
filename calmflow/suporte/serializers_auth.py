@@ -10,6 +10,7 @@ from django.db import IntegrityError
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import UserProfile, PsicologoProfile
+from .models import CheckIn
 
 
 def is_psicologo(user):
@@ -302,7 +303,6 @@ class CheckInResumoSerializer(serializers.ModelSerializer):
     """Serializer de check-in para leitura pelo psicólogo."""
 
     class Meta:
-        from .models import CheckIn
         model = CheckIn
         fields = [
             'id', 'clima_interno', 'nivel_ruido', 'gatilho',
