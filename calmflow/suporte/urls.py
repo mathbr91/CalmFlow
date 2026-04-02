@@ -15,6 +15,8 @@ from .views_auth import (
     PsicologoRegisterView,
     PsicologoTokenObtainPairView,
     PsicologoMeView,
+    PsicologoPacientesView,
+    PsicologoPacienteCheckInsView,
 )
 
 # Registrar os viewsets na router padrão do DRF
@@ -32,6 +34,8 @@ urlpatterns = [
     path('psi/register/', PsicologoRegisterView.as_view(), name='psi_register'),
     path('psi/login/', PsicologoTokenObtainPairView.as_view(), name='psi_login'),
     path('psi/me/', PsicologoMeView.as_view(), name='psi_me'),
+    path('psi/pacientes/', PsicologoPacientesView.as_view(), name='psi_pacientes'),
+    path('psi/pacientes/<int:paciente_id>/checkins/', PsicologoPacienteCheckInsView.as_view(), name='psi_paciente_checkins'),
     path('profile/', profile_view, name='profile'),
     path('profile-extended/', UserProfileView.as_view(), name='profile_extended'),
     

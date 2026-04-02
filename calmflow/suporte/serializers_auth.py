@@ -256,3 +256,56 @@ class PsicologoMeSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'registro_profissional', 'especialidade', 'telefone']
 
+
+class PacienteResumoSerializer(serializers.ModelSerializer):
+    """Resumo de um paciente vinculado ao psicólogo."""
+    total_checkins = serializers.SerializerMethodField()
+    ultimo_checkin = serializers.SerializerMethodField()
+    streak_dias = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ['id', 'first_name', 'email', 'total_checkins', 'ultimo_checkin', 'streak_dias']
+
+    def get_total_checkins(self, user):
+        from .models import CheckIn
+        return CheckIn.objects.filter(usuario=user).count()
+
+    def get_ultimo_checkin(self, user):
+        from .models import CheckIn
+        ci = CheckIn.objects.filter(usuario=user).order_by('-criado_em').first()
+        return ci.criado_em.isoformat() if ci else None
+
+    def get_streak_dias(self, user):
+        from .models import CheckIn, Emergencia
+        from django.utils import timezone
+        from datetime import timedelta
+        datas = set(
+            CheckIn.objects.filter(usuario=user).dates('criado_em', 'day', order='DESC')
+        ) | set(
+            Emergencia.objects.filter(usuario=user).dates('criado_em', 'day', order='DESC')
+        )
+        if not datas:
+            return 0
+        today = timezone.localdate()
+        if today not in datas:
+            return 0
+        streak = 1
+        ref = today - timedelta(days=1)
+        while ref in datas:
+            streak += 1
+            ref -= timedelta(days=1)
+        return streak
+
+
+class CheckInResumoSerializer(serializers.ModelSerializer):
+    """Serializer de check-in para leitura pelo psicólogo."""
+
+    class Meta:
+        from .models import CheckIn
+        model = CheckIn
+        fields = [
+            'id', 'clima_interno', 'nivel_ruido', 'gatilho',
+            'auto_eficacia', 'sintomas', 'notas', 'criado_em',
+        ]
+

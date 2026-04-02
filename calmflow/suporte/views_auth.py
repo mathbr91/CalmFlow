@@ -20,9 +20,11 @@ from .serializers_auth import (
     PsicologoRegisterSerializer,
     PsicologoTokenObtainPairSerializer,
     PsicologoMeSerializer,
+    PacienteResumoSerializer,
+    CheckInResumoSerializer,
     is_psicologo,
 )
-from .models import UserProfile, CheckIn, Emergencia
+from .models import UserProfile, CheckIn, Emergencia, VinculoTerapeutico
 
 logger = logging.getLogger(__name__)
 
@@ -224,6 +226,58 @@ class PsicologoMeView(APIView):
         request.user.psicologo_profile.sincronizar_vinculos_por_registro()
         serializer = PsicologoMeSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class PsicologoPacientesView(APIView):
+    """Lista pacientes vinculados ao psicólogo autenticado."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        if not is_psicologo(request.user):
+            return Response({'detail': 'Acesso restrito para psicólogos.'}, status=status.HTTP_403_FORBIDDEN)
+
+        if not hasattr(request.user, 'psicologo_profile') or not request.user.psicologo_profile.ativo:
+            return Response({'detail': 'Perfil de psicólogo não encontrado ou inativo.'}, status=status.HTTP_403_FORBIDDEN)
+
+        psicologo = request.user.psicologo_profile
+        vinculos = VinculoTerapeutico.objects.filter(
+            psicologo=psicologo, status='ativo'
+        ).select_related('paciente').order_by('-criado_em')
+
+        pacientes = [v.paciente for v in vinculos]
+        serializer = PacienteResumoSerializer(pacientes, many=True)
+        return Response({'count': len(pacientes), 'pacientes': serializer.data}, status=status.HTTP_200_OK)
+
+
+class PsicologoPacienteCheckInsView(APIView):
+    """Retorna histórico de check-ins de um paciente vinculado ao psicólogo."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, paciente_id, *args, **kwargs):
+        if not is_psicologo(request.user):
+            return Response({'detail': 'Acesso restrito para psicólogos.'}, status=status.HTTP_403_FORBIDDEN)
+
+        if not hasattr(request.user, 'psicologo_profile') or not request.user.psicologo_profile.ativo:
+            return Response({'detail': 'Perfil de psicólogo não encontrado ou inativo.'}, status=status.HTTP_403_FORBIDDEN)
+
+        psicologo = request.user.psicologo_profile
+        vinculo = VinculoTerapeutico.objects.filter(
+            psicologo=psicologo, paciente_id=paciente_id, status='ativo'
+        ).first()
+
+        if not vinculo:
+            return Response({'detail': 'Paciente não encontrado ou não vinculado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        checkins = CheckIn.objects.filter(usuario=vinculo.paciente).order_by('-criado_em')[:50]
+        serializer = CheckInResumoSerializer(checkins, many=True)
+        return Response({
+            'paciente_id': paciente_id,
+            'paciente_nome': vinculo.paciente.first_name or vinculo.paciente.email,
+            'count': len(serializer.data),
+            'checkins': serializer.data,
+        }, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])

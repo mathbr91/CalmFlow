@@ -289,27 +289,201 @@ const html = `<!doctype html>
         word-break: break-word;
       }
 
-      .session-note {
+      .section-title {
+        margin: 0 0 12px;
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: #4b739a;
+      }
+
+      .patient-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .patient-card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
         border: 1px solid var(--line);
         border-radius: 14px;
-        padding: 14px;
-        background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
-        color: #254568;
-        line-height: 1.5;
-      }
-
-      .me {
-        border: 1px solid var(--line);
-        border-radius: 12px;
         background: #fff;
-        padding: 12px;
+        padding: 14px 16px;
+        cursor: pointer;
+        transition: box-shadow 0.15s, border-color 0.15s;
+        text-align: left;
       }
 
-      .me pre {
+      .patient-card:hover {
+        border-color: #7bb8f5;
+        box-shadow: 0 4px 16px rgba(17, 90, 180, 0.10);
+      }
+
+      .patient-avatar {
+        width: 38px;
+        height: 38px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #c3deff, #eaf4ff);
+        color: #1a5fb0;
+        font-weight: 800;
+        font-size: 15px;
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+      }
+
+      .patient-info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .patient-name {
         margin: 0;
-        overflow: auto;
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--ink-1);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .patient-email {
+        margin: 2px 0 0;
         font-size: 12px;
-        color: #1e3554;
+        color: var(--ink-2);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .patient-stats {
+        display: flex;
+        gap: 12px;
+        flex-shrink: 0;
+      }
+
+      .stat {
+        text-align: center;
+      }
+
+      .stat-value {
+        display: block;
+        font-size: 15px;
+        font-weight: 800;
+        color: var(--accent);
+      }
+
+      .stat-label {
+        font-size: 10px;
+        color: #7a96ba;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 24px;
+        color: var(--ink-2);
+        font-size: 14px;
+        border: 1px dashed var(--line);
+        border-radius: 14px;
+      }
+
+      .checkin-panel {
+        display: none;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #f9fcff;
+        padding: 16px;
+        gap: 10px;
+        flex-direction: column;
+      }
+
+      .checkin-panel.open {
+        display: flex;
+      }
+
+      .checkin-panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .checkin-panel-title {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--ink-1);
+      }
+
+      .back-btn {
+        height: 32px;
+        min-width: 80px;
+        background: #eef5ff;
+        color: #0c4d9a;
+        border: 1px solid rgba(31,122,224,0.16);
+        font-size: 13px;
+        border-radius: 8px;
+      }
+
+      .checkin-list {
+        display: grid;
+        gap: 8px;
+        max-height: 340px;
+        overflow-y: auto;
+      }
+
+      .checkin-item {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fff;
+        padding: 10px 12px;
+      }
+
+      .checkin-meta {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 6px;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: #e8f2ff;
+        color: #1a4d8a;
+        border-radius: 999px;
+        padding: 2px 8px;
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .chip.bad {
+        background: #fff0ef;
+        color: #b03020;
+      }
+
+      .chip.ok {
+        background: #edfff4;
+        color: #1a7a45;
+      }
+
+      .checkin-date {
+        font-size: 11px;
+        color: #8ba4c0;
+        margin-left: auto;
+      }
+
+      .checkin-notes {
+        font-size: 12px;
+        color: #334e6b;
+        line-height: 1.5;
+        margin: 0;
       }
 
       .api {
@@ -416,11 +590,22 @@ const html = `<!doctype html>
             </article>
           </div>
 
-          <div class="session-note">Sessão persistida neste navegador. Ao reabrir a página, o portal tenta restaurar o acesso automaticamente e renovar o token quando necessário.</div>
+          <div>
+            <p class="section-title">Pacientes Vinculados</p>
+            <div id="patient-list" class="patient-list">
+              <div class="empty-state">Carregando...</div>
+            </div>
+          </div>
 
-          <section class="me">
-            <pre id="me-content"></pre>
-          </section>
+          <div id="checkin-panel" class="checkin-panel">
+            <div class="checkin-panel-header">
+              <h3 id="checkin-panel-title" class="checkin-panel-title">Check-ins</h3>
+              <button id="back-btn" class="back-btn" type="button">← Voltar</button>
+            </div>
+            <div id="checkin-list" class="checkin-list">
+              <div class="empty-state">Carregando...</div>
+            </div>
+          </div>
         </section>
 
         <p id="api-hint" class="api"></p>
@@ -434,7 +619,6 @@ const html = `<!doctype html>
       const result = document.getElementById('result');
       const loginView = document.getElementById('login-view');
       const dashboardView = document.getElementById('dashboard-view');
-      const meContent = document.getElementById('me-content');
       const apiHint = document.getElementById('api-hint');
       const passwordInput = document.getElementById('password');
       const passwordToggle = document.getElementById('password-toggle');
@@ -446,6 +630,11 @@ const html = `<!doctype html>
       const profileRegistro = document.getElementById('profile-registro');
       const profileEspecialidade = document.getElementById('profile-especialidade');
       const profileTelefone = document.getElementById('profile-telefone');
+      const patientListEl = document.getElementById('patient-list');
+      const checkinPanel = document.getElementById('checkin-panel');
+      const checkinPanelTitle = document.getElementById('checkin-panel-title');
+      const checkinListEl = document.getElementById('checkin-list');
+      const backBtn = document.getElementById('back-btn');
       const SESSION_KEYS = {
         access: 'psi_access_token',
         refresh: 'psi_refresh_token',
@@ -491,16 +680,115 @@ const html = `<!doctype html>
         return localStorage.getItem(SESSION_KEYS.refresh) || '';
       }
 
+      const CLIMA_EMOJI = { ensolarado: '☀️', nublado: '☁️', tempestuoso: '⛈️', neblina: '🌫️' };
+
+      function formatDate(iso) {
+        if (!iso) return '-';
+        return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      }
+
+      function avatarLetter(p) {
+        return ((p.first_name || p.email || '?')[0]).toUpperCase();
+      }
+
       function fillDashboard(data) {
         const displayName = data.first_name || data.email || 'Psicólogo';
         dashboardTitle.textContent = 'Olá, ' + displayName;
-        dashboardSubtitle.textContent = 'Seu acesso foi restaurado com sucesso neste navegador.';
+        dashboardSubtitle.textContent = 'Sessão ativa. Bem-vindo ao portal clínico.';
         profileEmail.textContent = data.email || '-';
         profileRegistro.textContent = data.registro_profissional || '-';
         profileEspecialidade.textContent = data.especialidade || 'Não informado';
         profileTelefone.textContent = data.telefone || 'Não informado';
-        meContent.textContent = JSON.stringify(data, null, 2);
+        loadPatients();
       }
+
+      async function loadPatients() {
+        patientListEl.innerHTML = '<div class="empty-state">Carregando pacientes...</div>';
+        checkinPanel.classList.remove('open');
+        try {
+          const resp = await fetch('/api/psi/pacientes/', {
+            headers: { Authorization: 'Bearer ' + getAccessToken() },
+          });
+          if (resp.status === 401) {
+            const newToken = await refreshAccessToken();
+            return loadPatients();
+          }
+          const data = await resp.json();
+          renderPatients(data.pacientes || []);
+        } catch (e) {
+          patientListEl.innerHTML = '<div class="empty-state">Erro ao carregar pacientes.</div>';
+        }
+      }
+
+      function renderPatients(patients) {
+        if (!patients.length) {
+          patientListEl.innerHTML = '<div class="empty-state">Nenhum paciente vinculado ainda. Pacientes que informarem seu registro profissional no app serão vinculados automaticamente.</div>';
+          return;
+        }
+        patientListEl.innerHTML = '';
+        patients.forEach((p) => {
+          const card = document.createElement('button');
+          card.type = 'button';
+          card.className = 'patient-card';
+          card.innerHTML =
+            '<div class="patient-avatar">' + avatarLetter(p) + '</div>' +
+            '<div class="patient-info">' +
+              '<p class="patient-name">' + (p.first_name || 'Paciente') + '</p>' +
+              '<p class="patient-email">' + p.email + '</p>' +
+            '</div>' +
+            '<div class="patient-stats">' +
+              '<div class="stat"><span class="stat-value">' + p.total_checkins + '</span><span class="stat-label">Check-ins</span></div>' +
+              '<div class="stat"><span class="stat-value">' + p.streak_dias + '</span><span class="stat-label">Streak</span></div>' +
+            '</div>';
+          card.addEventListener('click', () => openCheckins(p));
+          patientListEl.appendChild(card);
+        });
+      }
+
+      async function openCheckins(patient) {
+        checkinPanel.classList.add('open');
+        checkinPanelTitle.textContent = 'Check-ins de ' + (patient.first_name || patient.email);
+        checkinListEl.innerHTML = '<div class="empty-state">Carregando...</div>';
+        checkinPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        try {
+          const resp = await fetch('/api/psi/pacientes/' + patient.id + '/checkins/', {
+            headers: { Authorization: 'Bearer ' + getAccessToken() },
+          });
+          const data = await resp.json();
+          renderCheckins(data.checkins || []);
+        } catch (e) {
+          checkinListEl.innerHTML = '<div class="empty-state">Erro ao carregar check-ins.</div>';
+        }
+      }
+
+      function renderCheckins(checkins) {
+        if (!checkins.length) {
+          checkinListEl.innerHTML = '<div class="empty-state">Nenhum check-in registrado ainda.</div>';
+          return;
+        }
+        checkinListEl.innerHTML = '';
+        checkins.forEach((ci) => {
+          const item = document.createElement('div');
+          item.className = 'checkin-item';
+          const emoji = CLIMA_EMOJI[ci.clima_interno] || '🌡️';
+          const ruido = ci.nivel_ruido >= 7 ? 'bad' : ci.nivel_ruido <= 3 ? 'ok' : '';
+          item.innerHTML =
+            '<div class="checkin-meta">' +
+              '<span class="chip">' + emoji + ' ' + ci.clima_interno + '</span>' +
+              '<span class="chip ' + ruido + '">ruído ' + ci.nivel_ruido + '/10</span>' +
+              '<span class="chip">auto: ' + ci.auto_eficacia + '/10</span>' +
+              '<span class="chip">' + ci.gatilho + '</span>' +
+              '<span class="checkin-date">' + formatDate(ci.criado_em) + '</span>' +
+            '</div>' +
+            (ci.notas ? '<p class="checkin-notes">' + ci.notas + '</p>' : '') +
+            (ci.sintomas ? '<p class="checkin-notes" style="color:#7a4030">' + ci.sintomas + '</p>' : '');
+          checkinListEl.appendChild(item);
+        });
+      }
+
+      backBtn.addEventListener('click', () => {
+        checkinPanel.classList.remove('open');
+      });
 
       async function refreshAccessToken() {
         const refreshToken = getRefreshToken();
@@ -601,7 +889,6 @@ const html = `<!doctype html>
         clearSession();
         dashboardSubtitle.textContent = 'Sessão encerrada.';
         passwordInput.value = '';
-        meContent.textContent = '';
         setView('login');
         setResult('', '');
       });
