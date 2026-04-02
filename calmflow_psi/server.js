@@ -1,6 +1,7 @@
 const http = require('http');
 
 const PORT = process.env.PORT || 3000;
+const HOST = '0.0.0.0';
 
 const html = `<!doctype html>
 <html lang="pt-BR">
@@ -71,6 +72,6 @@ const server = http.createServer((req, res) => {
   res.end(html);
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, HOST, () => {
   console.log(`CalmFlow PSI a correr na porta ${PORT}`);
 });
